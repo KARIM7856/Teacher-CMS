@@ -18,6 +18,9 @@ to browse and consume the content the teacher publishes.
 - **Riverpod** (`flutter_riverpod`) for state management
 - **supabase_flutter** for auth, data, and storage against the `/supabase` backend
 - Bundled **Cairo** Arabic font (`assets/fonts`)
+- Media: **video_player** + **chewie** (inline video), **youtube_player_flutter**
+  (YouTube), **pdfx** (in-app PDF), **url_launcher** (external/other files),
+  **flutter_markdown** (post body), **cached_network_image** (lazy images)
 
 ### Why Riverpod
 
@@ -79,8 +82,15 @@ get the welcome → sign-up/sign-in flow; sessions persist across launches.
 
 Checks: `flutter analyze`, `flutter test`.
 
-## What's built (Phase 3 — foundation only)
+## What's built
 
-Auth flow, session persistence, the themed app shell with bottom-nav tabs
-(Home, Browse, Playlists, Profile as placeholders), and the data/state plumbing.
-**Content browsing is intentionally not built yet.**
+- **Foundation (Phase 3):** auth flow, session persistence, the themed app
+  shell with bottom-nav tabs, and the data/state plumbing.
+- **Content browsing (Phase 4):** Home (continue + recent), Browse
+  (categories → subcategories → posts, tag filter), and the post viewer
+  (markdown body; inline video for stored/direct files, embedded YouTube,
+  external open for Vimeo/unknown; in-app PDF; file open/download). Only
+  published content is ever requested; every screen handles loading / empty /
+  error, and lists load lazily.
+
+The Playlists tab and achievement celebrations come in later phases.

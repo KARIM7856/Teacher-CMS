@@ -151,7 +151,7 @@ each phase.**
 - Data-access layer in `/admin/src/api`, Supabase client + auth context, and
   `.env.example` for the keys. Typecheck + production build pass.
 
-### Phase 3 — Student app scaffold (Flutter) (current)
+### Phase 3 — Student app scaffold (Flutter)
 
 - `/app` scaffolded: Flutter (Android + iOS), Arabic-first / RTL (default
   locale `ar` + Material localizations), bundled **Cairo** font, warm
@@ -167,9 +167,31 @@ each phase.**
   Playlists, Profile) as placeholders. `flutter analyze` clean; widget smoke
   test passes. Content browsing intentionally not built yet.
 
+### Phase 4 — Content browsing & post viewer (current)
+
+- `/app` now browses real content from Supabase, **published-only** throughout
+  (queries never request drafts; RLS backstops it).
+- **Shared content layer** (`features/content`): `ContentRepository` + Riverpod
+  providers for categories, subcategories, posts (with optional tag filter via
+  an inner join), recent posts, tags, and a combined post-detail fetch
+  (post + media + tags).
+- **Home tab:** a "تابِع ما بدأته" (continue) row wired to `view_history`
+  (empty until tracking lands) above the most recent published lessons.
+- **Browse tab:** categories → subcategories → posts, with a tag filter bar.
+- **Post viewer:** markdown body (`flutter_markdown`) plus media —
+  `video_player`/`chewie` for stored & direct-file video, an embedded YouTube
+  player (`youtube_player_flutter`) for YouTube links, Vimeo/unknown open
+  externally (`url_launcher`); PDFs render inline (`pdfx`); other files
+  open/download. Each video carries resume/progress hooks for the next phase.
+- **States:** a reusable `AsyncValueWidget` gives every screen consistent
+  loading / empty / error (with retry); lists are lazy (`ListView.builder`).
+- Android `INTERNET` permission + a url_launcher `<queries>` entry added.
+  `flutter analyze` clean; widget + media-classification tests pass.
+
 ### Next up
 
-- Build content browsing in `/app` (Home, Browse, post viewer) on the schema.
+- Add latest-viewed tracking (write `view_history`; debounced save/restore of
+  video position) and build the Playlists tab; then achievement celebrations.
 - Initialize the Supabase CLI project / link to a hosted project.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.

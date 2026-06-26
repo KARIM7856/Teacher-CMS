@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Streaming video, fetching PDFs, and reaching Supabase all need network. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="teacher_cms_app"
         android:name="${applicationName}"
@@ -40,6 +42,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher needs to see a browser to open external links (Android 11+). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>
