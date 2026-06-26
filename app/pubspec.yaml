@@ -22,6 +22,8 @@ dependencies:
   chewie: ^1.14.1
   youtube_player_flutter: ^10.0.1
   pdfx: ^2.9.2
+  confetti: ^0.8.0
+  lottie: ^3.4.0
 
 dev_dependencies:
   flutter_test:
@@ -30,6 +32,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/lottie/celebration.json
 
   fonts:
     - family: Cairo

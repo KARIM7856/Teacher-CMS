@@ -188,7 +188,7 @@ each phase.**
 - Android `INTERNET` permission + a url_launcher `<queries>` entry added.
   `flutter analyze` clean; widget + media-classification tests pass.
 
-### Phase 5 — Latest-viewed tracking & playlists (current)
+### Phase 5 — Latest-viewed tracking & playlists
 
 - **Latest-viewed:** opening a post upserts a `view_history` row; video
   playback position is saved on a throttle (a 5s timer plus a final flush on
@@ -205,11 +205,37 @@ each phase.**
   a `PostView` (detail + resume) provider. Unit tests cover the sequential
   `PlaylistContext` logic; `flutter analyze` clean, all tests pass.
 
+### Phase 6 — Achievement celebrations (current)
+
+- **Server-side detection** (`/supabase` migration `…000400`): a lightweight
+  `student_activity` day-log (for streaks), the starter achievement set
+  (first view, 5 & 25 views, 5-day streak, first playlist completed), and a
+  SECURITY DEFINER `claim_achievements()` RPC that records activity, grants any
+  newly-earned achievements, and **returns just those** so the client can
+  celebrate them. Detection is authoritative in Postgres; the client can only
+  ask the server to evaluate. Validated end-to-end on Postgres 16.
+- **Triggering:** the app calls `claim()` on app open (covers streaks) and
+  after each post view (covers view counts + playlist completion); a Riverpod
+  queue surfaces unlocks one at a time.
+- **Celebration overlay:** confetti (`confetti`), a scaling + glowing badge and
+  staggered text via Flutter's animation framework (elastic/eased `Interval`s),
+  Lottie accent rings (`lottie`, with a graceful fallback), and a haptic. It's
+  generic over `CelebrationData`, so new achievements need no overlay changes.
+- **Why these tools:** Flutter's framework drives the transition choreography
+  (full control, no assets); `confetti` for physics-based particles; **Lottie**
+  for the vector accent (text-based JSON, designer-replaceable). **Rive** was
+  skipped — it needs a binary `.riv` authored in its editor, whereas a Lottie
+  JSON is reviewable/editable in-repo.
+- **Achievements screen** in Profile: a grid of earned (colorful, pop-in) and
+  locked (muted) badges. **Reduce-motion** is respected everywhere (no
+  confetti/Lottie/scale; a settled, static presentation instead).
+- `flutter analyze` clean; widget + unit tests pass (incl. an overlay render
+  test and the SQL engine validation).
+
 ### Next up
 
-- Build achievement detection + celebration animations (Lottie/Rive + Flutter
-  animation framework), with an Achievements screen and reduce-motion support.
 - Initialize the Supabase CLI project / link to a hosted project.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.
-- Add "continue where you left off", playlists, and celebrations in `/app`.
+- Run the full app on a device/emulator and wire it to a hosted Supabase
+  project (only `flutter analyze` + tests run in this container).

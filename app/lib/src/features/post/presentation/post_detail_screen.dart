@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_value_widget.dart';
 import '../../../models/post_detail.dart';
+import '../../achievements/application/celebration_controller.dart';
 import '../../history/application/history_providers.dart';
 import '../../history/data/view_history_repository.dart';
 import '../../playlists/application/playlist_providers.dart';
@@ -79,6 +80,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     if (playlist != null) {
       ref.invalidate(playlistProgressProvider(playlist.playlistId));
     }
+    // Evaluate achievements now that this post is in the student's history
+    // (covers "first view", view-count milestones, and playlist completion).
+    ref.read(celebrationControllerProvider.notifier).claim();
   }
 
   // High-frequency ticks only update memory; the timer/dispose do the writing.

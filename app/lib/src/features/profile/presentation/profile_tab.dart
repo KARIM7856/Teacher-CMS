@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../achievements/presentation/achievements_screen.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/profile_providers.dart';
 
@@ -49,6 +50,20 @@ class ProfileTab extends ConsumerWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xl),
+          Card(
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.emoji_events_rounded),
+              title: const Text('إنجازاتي'),
+              trailing: const Icon(Icons.chevron_left_rounded),
+              onTap: () =>
+                  Navigator.of(context).push(AchievementsScreen.route()),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
             onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
             icon: const Icon(Icons.logout_rounded),

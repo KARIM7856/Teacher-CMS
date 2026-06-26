@@ -21,6 +21,8 @@ to browse and consume the content the teacher publishes.
 - Media: **video_player** + **chewie** (inline video), **youtube_player_flutter**
   (YouTube), **pdfx** (in-app PDF), **url_launcher** (external/other files),
   **flutter_markdown** (post body), **cached_network_image** (lazy images)
+- Celebrations: **confetti** (particles) + **lottie** (vector accent), on top of
+  Flutter's animation framework
 
 ### Why Riverpod
 
@@ -97,5 +99,7 @@ Checks: `flutter analyze`, `flutter test`.
   The Playlists tab lists published playlists; its detail screen shows ordered
   posts with progress and supports sequential play-through (a "next lesson"
   bar, plus auto-advance when a video ends).
-
-Achievement celebrations come in a later phase.
+- **Achievements (Phase 6):** the server detects unlocks (`claim_achievements`
+  RPC) and the app celebrates them with a full-screen overlay (confetti, a
+  glowing badge, Lottie accents, haptics) and an Achievements grid in Profile.
+  Reduce-motion is respected throughout.
