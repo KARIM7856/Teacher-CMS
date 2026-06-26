@@ -138,7 +138,7 @@ each phase.**
 - Idempotent `seed.sql` (Arabic sample content) plus a local-run guide in
   `/supabase/README.md`. Migrations validated end-to-end on Postgres 16.
 
-### Phase 2 — Admin portal (web) (current)
+### Phase 2 — Admin portal (web)
 
 - `/admin` scaffolded: **React + Vite + TypeScript**, **Mantine v7** (RTL via
   `DirectionProvider`), **@dnd-kit** for reordering, **react-markdown** for the
@@ -151,10 +151,26 @@ each phase.**
 - Data-access layer in `/admin/src/api`, Supabase client + auth context, and
   `.env.example` for the keys. Typecheck + production build pass.
 
+### Phase 3 — Student app scaffold (Flutter) (current)
+
+- `/app` scaffolded: Flutter (Android + iOS), Arabic-first / RTL (default
+  locale `ar` + Material localizations), bundled **Cairo** font, warm
+  Material 3 theme centralized in `lib/src/core/theme`.
+- Feature-first architecture under `lib/src` separating data (repositories),
+  models, application (**Riverpod** providers), and presentation. Riverpod
+  chosen for compile-safe DI, testability, and first-class async/stream
+  handling (auth state + future data).
+- Supabase client wrapper + providers; credentials via `--dart-define`
+  (`dart_define.example.json`); session persistence handled by supabase_flutter.
+- Auth flow (welcome → email/password sign-up & sign-in; returning users land
+  straight in the app) and an app shell with bottom-nav tabs (Home, Browse,
+  Playlists, Profile) as placeholders. `flutter analyze` clean; widget smoke
+  test passes. Content browsing intentionally not built yet.
+
 ### Next up
 
-- Scaffold the Flutter student app (`/app`) and wire it to Supabase.
+- Build content browsing in `/app` (Home, Browse, post viewer) on the schema.
 - Initialize the Supabase CLI project / link to a hosted project.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.
-- When scaffolding, set `ar` / RTL defaults and bundle the Arabic font.
+- Add "continue where you left off", playlists, and celebrations in `/app`.
