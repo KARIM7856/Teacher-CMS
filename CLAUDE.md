@@ -167,7 +167,7 @@ each phase.**
   Playlists, Profile) as placeholders. `flutter analyze` clean; widget smoke
   test passes. Content browsing intentionally not built yet.
 
-### Phase 4 — Content browsing & post viewer (current)
+### Phase 4 — Content browsing & post viewer
 
 - `/app` now browses real content from Supabase, **published-only** throughout
   (queries never request drafts; RLS backstops it).
@@ -188,10 +188,27 @@ each phase.**
 - Android `INTERNET` permission + a url_launcher `<queries>` entry added.
   `flutter analyze` clean; widget + media-classification tests pass.
 
+### Phase 5 — Latest-viewed tracking & playlists (current)
+
+- **Latest-viewed:** opening a post upserts a `view_history` row; video
+  playback position is saved on a throttle (a 5s timer plus a final flush on
+  exit, so we never write every second) and restored on the next open. The
+  Home "تابِع ما بدأته" row now reflects real history, newest first, with the
+  saved resume position shown where available.
+- **Playlists tab:** lists published playlists (cached cover images); the
+  detail screen shows posts in order with per-post progress (viewed/resume)
+  and "اكتمل X من N".
+- **Sequential playback:** opening a post from a playlist carries a
+  `PlaylistContext`; a bottom bar advances to the next lesson, and finishing a
+  video auto-advances (inline end-of-stream / YouTube `ended` state).
+- New layers: `PlaylistRepository` + providers, `view_history` write methods,
+  a `PostView` (detail + resume) provider. Unit tests cover the sequential
+  `PlaylistContext` logic; `flutter analyze` clean, all tests pass.
+
 ### Next up
 
-- Add latest-viewed tracking (write `view_history`; debounced save/restore of
-  video position) and build the Playlists tab; then achievement celebrations.
+- Build achievement detection + celebration animations (Lottie/Rive + Flutter
+  animation framework), with an Achievements screen and reduce-motion support.
 - Initialize the Supabase CLI project / link to a hosted project.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.

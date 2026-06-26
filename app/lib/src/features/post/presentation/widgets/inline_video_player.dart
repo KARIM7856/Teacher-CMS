@@ -21,11 +21,15 @@ class InlineVideoPlayer extends ConsumerStatefulWidget {
     required this.item,
     this.initialPositionSeconds = 0,
     this.onPositionChanged,
+    this.onCompleted,
   });
 
   final MediaItem item;
   final int initialPositionSeconds;
   final void Function(Duration position)? onPositionChanged;
+
+  /// Fires once when playback reaches the end (used for playlist auto-advance).
+  final VoidCallback? onCompleted;
 
   @override
   ConsumerState<InlineVideoPlayer> createState() => _InlineVideoPlayerState();
@@ -36,6 +40,7 @@ class _InlineVideoPlayerState extends ConsumerState<InlineVideoPlayer> {
   ChewieController? _chewieController;
   bool _loading = true;
   bool _failed = false;
+  bool _completedFired = false;
 
   @override
   void initState() {
@@ -89,8 +94,16 @@ class _InlineVideoPlayerState extends ConsumerState<InlineVideoPlayer> {
 
   void _reportPosition() {
     final VideoPlayerController? video = _videoController;
-    if (video != null && video.value.isInitialized) {
-      widget.onPositionChanged?.call(video.value.position);
+    if (video == null || !video.value.isInitialized) return;
+
+    widget.onPositionChanged?.call(video.value.position);
+
+    final Duration duration = video.value.duration;
+    final bool reachedEnd = duration > Duration.zero &&
+        video.value.position >= duration - const Duration(milliseconds: 500);
+    if (reachedEnd && !_completedFired) {
+      _completedFired = true;
+      widget.onCompleted?.call();
     }
   }
 

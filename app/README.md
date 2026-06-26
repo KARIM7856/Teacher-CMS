@@ -92,5 +92,10 @@ Checks: `flutter analyze`, `flutter test`.
   external open for Vimeo/unknown; in-app PDF; file open/download). Only
   published content is ever requested; every screen handles loading / empty /
   error, and lists load lazily.
+- **Tracking & playlists (Phase 5):** opening a post records it in
+  `view_history`; video position is saved on a throttle and restored next time.
+  The Playlists tab lists published playlists; its detail screen shows ordered
+  posts with progress and supports sequential play-through (a "next lesson"
+  bar, plus auto-advance when a video ends).
 
-The Playlists tab and achievement celebrations come in later phases.
+Achievement celebrations come in a later phase.

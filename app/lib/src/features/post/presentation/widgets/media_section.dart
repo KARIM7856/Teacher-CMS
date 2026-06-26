@@ -17,11 +17,13 @@ class MediaSection extends StatelessWidget {
     required this.media,
     this.initialVideoPositionSeconds = 0,
     this.onVideoProgress,
+    this.onVideoCompleted,
   });
 
   final List<MediaItem> media;
   final int initialVideoPositionSeconds;
   final void Function(Duration position)? onVideoProgress;
+  final VoidCallback? onVideoCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +51,7 @@ class MediaSection extends StatelessWidget {
             item: item,
             initialPositionSeconds: isPrimary ? initialVideoPositionSeconds : 0,
             onPositionChanged: isPrimary ? onVideoProgress : null,
+            onCompleted: isPrimary ? onVideoCompleted : null,
           ));
         case MediaType.pdf:
           children.add(PdfMediaView(item: item));

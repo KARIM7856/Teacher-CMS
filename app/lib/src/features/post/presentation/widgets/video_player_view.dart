@@ -16,11 +16,13 @@ class VideoPlayerView extends StatelessWidget {
     required this.item,
     this.initialPositionSeconds = 0,
     this.onPositionChanged,
+    this.onCompleted,
   });
 
   final MediaItem item;
   final int initialPositionSeconds;
   final void Function(Duration position)? onPositionChanged;
+  final VoidCallback? onCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,7 @@ class VideoPlayerView extends StatelessWidget {
           item: item,
           initialPositionSeconds: initialPositionSeconds,
           onPositionChanged: onPositionChanged,
+          onCompleted: onCompleted,
         );
 
       case VideoSource.youtube:
@@ -47,6 +50,7 @@ class VideoPlayerView extends StatelessWidget {
           videoId: videoId,
           initialPositionSeconds: initialPositionSeconds,
           onPositionChanged: onPositionChanged,
+          onCompleted: onCompleted,
         );
 
       case VideoSource.vimeo:
