@@ -112,7 +112,7 @@ Built incrementally over several phases:
 A running log of where the project stands. **Update this section at the end of
 each phase.**
 
-### Phase 0 — Repository scaffolding (current)
+### Phase 0 — Repository scaffolding
 
 - Monorepo folder layout created: `/app`, `/admin`, `/supabase`, each with a
   README describing its purpose.
@@ -122,12 +122,26 @@ each phase.**
 - Git initialized with a `.gitignore` covering Flutter, Node, and Supabase.
 - **No feature code, no project scaffolding, and no database schema yet.**
 
+### Phase 1 — Backend & data model (current)
+
+- Supabase schema as SQL migrations in `/supabase/migrations`: `profiles`,
+  `categories`, `subcategories`, `tags`, `posts`, `post_tags`, `media`,
+  `playlists`, `playlist_items`, `view_history`, `achievements`,
+  `user_achievements`.
+- Foreign keys, lookup indexes, and `updated_at` triggers throughout.
+- Row Level Security: public reads published content; students own their
+  `view_history` / `user_achievements`; admins do everything.
+- Storage buckets (`media`, `public-assets`) with published-gated / admin-write
+  policies.
+- Arabic-aware search via `normalize_arabic()` + a trigram-indexed generated
+  column on `posts`.
+- Idempotent `seed.sql` (Arabic sample content) plus a local-run guide in
+  `/supabase/README.md`. Migrations validated end-to-end on Postgres 16.
+
 ### Next up
 
 - Scaffold the three projects (Flutter app, web admin, Supabase init).
 - Decide on the web admin framework.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.
-- When scaffolding, set `ar` / RTL defaults and bundle the Arabic font; plan
-  Arabic-aware collation/full-text search in the schema.
-- Design the initial database schema (posts, categories, tags).
+- When scaffolding, set `ar` / RTL defaults and bundle the Arabic font.
