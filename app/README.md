@@ -12,6 +12,14 @@ to browse and consume the content the teacher publishes.
 - Follow playlists (ordered collections of posts).
 - Show celebration animations when a student reaches an achievement.
 
+## Language & direction
+
+**Arabic-first and RTL by default** (`MaterialApp(locale: Locale('ar'))`,
+`TextDirection.rtl`). Use direction-aware widgets (`EdgeInsetsDirectional`,
+`AlignmentDirectional`, `start` / `end`), bundle an Arabic font, route all
+strings through localization, and flip directional icons/progress for RTL.
+See `/CLAUDE.md` → *Language & direction*.
+
 ## Backend
 
 Talks to the shared Supabase project (see `/supabase`) for auth, data, and file

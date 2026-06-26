@@ -9,9 +9,53 @@ learning content through a web admin portal; students view that content for
 free through a mobile app. No paywalls, no per-student accounts to purchase —
 the goal is open access to the teacher's material.
 
+The audience is **Arabic-speaking**, so the platform is **Arabic-first and
+right-to-left (RTL)** throughout — see *Language & direction* below.
+
 - **Students** use a mobile app to browse and consume content.
 - **The teacher** uses a separate web admin portal to create and publish it.
 - A shared Supabase backend stores the data, files, and auth.
+
+## Language & direction — Arabic-first (core principle)
+
+**Arabic is the primary language and the platform is right-to-left (RTL) by
+default.** This is a foundational constraint, not an afterthought — design and
+build every screen, layout, and data model RTL-first. Left-to-right is the
+exception, handled only for embedded Latin text (URLs, code, some names).
+
+Applies everywhere:
+
+- **Default locale is `ar`; RTL is the default text direction.**
+- **Never hardcode `left` / `right`.** Use direction-aware primitives so the UI
+  mirrors automatically:
+  - Flutter (`/app`): `EdgeInsetsDirectional`, `AlignmentDirectional`,
+    `start` / `end`; set `MaterialApp(locale: Locale('ar'), ...)` and let
+    widgets inherit `TextDirection.rtl`.
+  - Web (`/admin`): `<html lang="ar" dir="rtl">` and CSS **logical properties**
+    (`margin-inline-start`, `padding-inline-end`, `inset-inline`,
+    `text-align: start`) — not `margin-left` / `right`.
+- **Directional icons and motion must flip.** Back/forward arrows, chevrons,
+  progress bars, playlist order, and "continue where you left off" all flow
+  right-to-left.
+- **Bundle an Arabic font** with strong legibility for long-form reading
+  (e.g. Cairo, Tajawal, IBM Plex Sans Arabic, or a Naskh face). Don't depend on
+  system fonts. *(Exact face: to confirm.)*
+- **Mixed Arabic/Latin text** (an English term in an Arabic sentence, a URL, a
+  filename) must use proper bidirectional isolation so it doesn't reorder.
+- **Numerals:** pick one and apply consistently — Western (`0-9`) or
+  Arabic-Indic (`٠-٩`). *(Default assumption: Western digits; to confirm.)*
+- **Don't hardcode user-facing strings.** Route all copy through localization
+  from day one. Arabic is first; externalized strings leave room to add another
+  language later without rework.
+
+Backend (`/supabase`) implications:
+
+- Postgres stores Arabic (UTF-8) natively — no special column types needed.
+- For **sorting and search** of Arabic, plan for ICU collation (e.g.
+  `ar-x-icu`) and an Arabic text-search setup. Consider storing a **normalized**
+  form (strip tashkīl/diacritics, unify alef/hamza/yaa variants) alongside the
+  original for reliable search and matching.
+- Category, subcategory, tag, and post text are authored in Arabic.
 
 ## Stack
 
@@ -56,6 +100,10 @@ Built incrementally over several phases:
   does several things, split it.
 - **Comments only where non-obvious.** Don't restate what the code already
   says. Comment the *why* — intent, trade-offs, and surprises — not the *what*.
+- **RTL & i18n first.** Build every layout direction-aware (logical /
+  `start`-`end` properties, never literal `left` / `right`) and route all
+  user-facing text through localization with Arabic as the default locale.
+  See *Language & direction* above.
 - Keep each project's idioms consistent: follow Dart/Flutter conventions in
   `/app` and the chosen web framework's conventions in `/admin`.
 
@@ -69,6 +117,8 @@ each phase.**
 - Monorepo folder layout created: `/app`, `/admin`, `/supabase`, each with a
   README describing its purpose.
 - Root `CLAUDE.md` documenting goal, stack, layout, and conventions.
+- Established **Arabic-first / RTL** as a core design principle, documented in
+  `CLAUDE.md` and each folder README.
 - Git initialized with a `.gitignore` covering Flutter, Node, and Supabase.
 - **No feature code, no project scaffolding, and no database schema yet.**
 
@@ -76,4 +126,8 @@ each phase.**
 
 - Scaffold the three projects (Flutter app, web admin, Supabase init).
 - Decide on the web admin framework.
+- Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
+  Arabic-Indic `٠-٩`), and whether a second language is ever in scope.
+- When scaffolding, set `ar` / RTL defaults and bundle the Arabic font; plan
+  Arabic-aware collation/full-text search in the schema.
 - Design the initial database schema (posts, categories, tags).

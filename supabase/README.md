@@ -10,6 +10,14 @@ web admin portal (`/admin`).
 - **Auth** — student and teacher login.
 - **Storage** — uploaded files (video, PDFs, attachments).
 
+## Language & content
+
+Content is authored in **Arabic**. Postgres stores UTF-8 natively, so no
+special column types are needed, but plan for **Arabic-aware sorting and
+search**: ICU collation (e.g. `ar-x-icu`) and an Arabic full-text setup, plus a
+**normalized** search field (diacritics/tashkīl stripped, alef/hamza/yaa
+variants unified). See `/CLAUDE.md` → *Language & direction*.
+
 ## Contents
 
 - `migrations/` — versioned SQL migrations that define the database schema.

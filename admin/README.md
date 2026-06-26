@@ -10,6 +10,13 @@ content for students.
 - Build and order playlists.
 - Manage uploaded files in Supabase Storage.
 
+## Language & direction
+
+**Arabic-first and RTL by default** (`<html lang="ar" dir="rtl">`). Use CSS
+logical properties (`margin-inline-*`, `padding-inline-*`, `text-align: start`)
+rather than `left` / `right`, bundle an Arabic font, and externalize all
+user-facing strings. See `/CLAUDE.md` → *Language & direction*.
+
 ## Stack
 
 A Node-based web app. The specific framework will be chosen in a later phase.
