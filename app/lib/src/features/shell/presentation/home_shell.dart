@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../achievements/application/celebration_controller.dart';
-import '../../achievements/presentation/celebration_overlay.dart';
 import '../../browse/presentation/browse_tab.dart';
 import '../../home/presentation/home_tab.dart';
 import '../../playlists/presentation/playlists_tab.dart';
@@ -40,39 +39,36 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          body: IndexedStack(index: _index, children: _tabs),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'الرئيسية',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.explore_outlined),
-                selectedIcon: Icon(Icons.explore_rounded),
-                label: 'تصفّح',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.featured_play_list_outlined),
-                selectedIcon: Icon(Icons.featured_play_list_rounded),
-                label: 'القوائم',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: 'حسابي',
-              ),
-            ],
+    // The celebration overlay is mounted app-wide (see TeacherCmsApp.builder) so
+    // it appears above pushed routes such as the post detail screen.
+    return Scaffold(
+      body: IndexedStack(index: _index, children: _tabs),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'الرئيسية',
           ),
-        ),
-        const CelebrationOverlay(),
-      ],
+          NavigationDestination(
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore_rounded),
+            label: 'تصفّح',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.featured_play_list_outlined),
+            selectedIcon: Icon(Icons.featured_play_list_rounded),
+            label: 'القوائم',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'حسابي',
+          ),
+        ],
+      ),
     );
   }
 }
