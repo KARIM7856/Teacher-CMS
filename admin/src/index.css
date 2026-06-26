@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+}
+
+/* Markdown preview in the post editor */
+.markdown-preview > *:first-child {
+  margin-top: 0;
+}
+.markdown-preview img {
+  max-width: 100%;
+}
+.markdown-preview pre {
+  background: var(--mantine-color-gray-1);
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow: auto;
+}
+.markdown-preview code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.markdown-preview table {
+  border-collapse: collapse;
+}
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid var(--mantine-color-gray-3);
+  padding: 4px 8px;
+}

@@ -122,7 +122,7 @@ each phase.**
 - Git initialized with a `.gitignore` covering Flutter, Node, and Supabase.
 - **No feature code, no project scaffolding, and no database schema yet.**
 
-### Phase 1 — Backend & data model (current)
+### Phase 1 — Backend & data model
 
 - Supabase schema as SQL migrations in `/supabase/migrations`: `profiles`,
   `categories`, `subcategories`, `tags`, `posts`, `post_tags`, `media`,
@@ -138,10 +138,23 @@ each phase.**
 - Idempotent `seed.sql` (Arabic sample content) plus a local-run guide in
   `/supabase/README.md`. Migrations validated end-to-end on Postgres 16.
 
+### Phase 2 — Admin portal (web) (current)
+
+- `/admin` scaffolded: **React + Vite + TypeScript**, **Mantine v7** (RTL via
+  `DirectionProvider`), **@dnd-kit** for reordering, **react-markdown** for the
+  post body. Arabic-first / RTL throughout.
+- Screens: admin-only login (Supabase Auth + role check), dashboard counts,
+  categories/subcategories CRUD + drag-reorder, tags CRUD, posts list with
+  search + category/tag filters, post editor (markdown body, subcategory
+  picker, tag multi-select, published toggle, media uploader to Supabase
+  Storage with type + drag-reorder), playlists with drag-ordered items.
+- Data-access layer in `/admin/src/api`, Supabase client + auth context, and
+  `.env.example` for the keys. Typecheck + production build pass.
+
 ### Next up
 
-- Scaffold the three projects (Flutter app, web admin, Supabase init).
-- Decide on the web admin framework.
+- Scaffold the Flutter student app (`/app`) and wire it to Supabase.
+- Initialize the Supabase CLI project / link to a hosted project.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.
 - When scaffolding, set `ar` / RTL defaults and bundle the Arabic font.
