@@ -36,6 +36,7 @@ Twelve tables in the `public` schema:
 | `view_history` | "Continue where you left off" | PK `(student_id, post_id)`, `progress_seconds`, `last_viewed_at` |
 | `achievements` | Achievement definitions | `code` (unique), `title`, `description`, `icon` |
 | `user_achievements` | Unlocked achievements | PK `(student_id, achievement_id)`, `unlocked_at` |
+| `student_activity` | Daily activity log (for streaks) | PK `(student_id, activity_date)` |
 
 Conventions: UUID primary keys (`gen_random_uuid()`), `created_at` / `updated_at`
 on mutable tables (a `set_updated_at()` trigger keeps `updated_at` current),
@@ -80,6 +81,11 @@ Applied in filename order:
    `is_admin()`, the new-user / role-guard triggers, role grants.
 3. `20250601000200_rls_policies.sql` — RLS enablement + policies.
 4. `20250601000300_storage.sql` — storage buckets + object policies.
+5. `20250601000400_achievements_engine.sql` — `student_activity` log, the
+   starter achievement set, and `claim_achievements()` — a `SECURITY DEFINER`
+   RPC the app calls to evaluate the rules (first view, 5 / 25 views, 5-day
+   streak, first playlist completed), grant any newly earned, and return them
+   so the client can celebrate.
 
 `seed.sql` (sample data) runs separately — see below.
 
@@ -131,5 +137,7 @@ password: password123
 
 ## Status
 
-Schema, RLS, storage policies, and seed data are in place (Phase 1). Next:
-wire the apps to these tables and refine search/collation as real content lands.
+Schema, RLS, storage policies, and seed data are in place (Phase 1); the
+achievement-detection engine (`student_activity` + `claim_achievements()`) was
+added in Phase 6. Next: initialize/link a hosted Supabase project and refine
+search/collation as real content lands.

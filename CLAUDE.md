@@ -122,7 +122,7 @@ each phase.**
 - Git initialized with a `.gitignore` covering Flutter, Node, and Supabase.
 - **No feature code, no project scaffolding, and no database schema yet.**
 
-### Phase 1 — Backend & data model (current)
+### Phase 1 — Backend & data model
 
 - Supabase schema as SQL migrations in `/supabase/migrations`: `profiles`,
   `categories`, `subcategories`, `tags`, `posts`, `post_tags`, `media`,
@@ -138,10 +138,104 @@ each phase.**
 - Idempotent `seed.sql` (Arabic sample content) plus a local-run guide in
   `/supabase/README.md`. Migrations validated end-to-end on Postgres 16.
 
+### Phase 2 — Admin portal (web)
+
+- `/admin` scaffolded: **React + Vite + TypeScript**, **Mantine v7** (RTL via
+  `DirectionProvider`), **@dnd-kit** for reordering, **react-markdown** for the
+  post body. Arabic-first / RTL throughout.
+- Screens: admin-only login (Supabase Auth + role check), dashboard counts,
+  categories/subcategories CRUD + drag-reorder, tags CRUD, posts list with
+  search + category/tag filters, post editor (markdown body, subcategory
+  picker, tag multi-select, published toggle, media uploader to Supabase
+  Storage with type + drag-reorder), playlists with drag-ordered items.
+- Data-access layer in `/admin/src/api`, Supabase client + auth context, and
+  `.env.example` for the keys. Typecheck + production build pass.
+
+### Phase 3 — Student app scaffold (Flutter)
+
+- `/app` scaffolded: Flutter (Android + iOS), Arabic-first / RTL (default
+  locale `ar` + Material localizations), bundled **Cairo** font, warm
+  Material 3 theme centralized in `lib/src/core/theme`.
+- Feature-first architecture under `lib/src` separating data (repositories),
+  models, application (**Riverpod** providers), and presentation. Riverpod
+  chosen for compile-safe DI, testability, and first-class async/stream
+  handling (auth state + future data).
+- Supabase client wrapper + providers; credentials via `--dart-define`
+  (`dart_define.example.json`); session persistence handled by supabase_flutter.
+- Auth flow (welcome → email/password sign-up & sign-in; returning users land
+  straight in the app) and an app shell with bottom-nav tabs (Home, Browse,
+  Playlists, Profile) as placeholders. `flutter analyze` clean; widget smoke
+  test passes. Content browsing intentionally not built yet.
+
+### Phase 4 — Content browsing & post viewer
+
+- `/app` now browses real content from Supabase, **published-only** throughout
+  (queries never request drafts; RLS backstops it).
+- **Shared content layer** (`features/content`): `ContentRepository` + Riverpod
+  providers for categories, subcategories, posts (with optional tag filter via
+  an inner join), recent posts, tags, and a combined post-detail fetch
+  (post + media + tags).
+- **Home tab:** a "تابِع ما بدأته" (continue) row wired to `view_history`
+  (empty until tracking lands) above the most recent published lessons.
+- **Browse tab:** categories → subcategories → posts, with a tag filter bar.
+- **Post viewer:** markdown body (`flutter_markdown`) plus media —
+  `video_player`/`chewie` for stored & direct-file video, an embedded YouTube
+  player (`youtube_player_flutter`) for YouTube links, Vimeo/unknown open
+  externally (`url_launcher`); PDFs render inline (`pdfx`); other files
+  open/download. Each video carries resume/progress hooks for the next phase.
+- **States:** a reusable `AsyncValueWidget` gives every screen consistent
+  loading / empty / error (with retry); lists are lazy (`ListView.builder`).
+- Android `INTERNET` permission + a url_launcher `<queries>` entry added.
+  `flutter analyze` clean; widget + media-classification tests pass.
+
+### Phase 5 — Latest-viewed tracking & playlists
+
+- **Latest-viewed:** opening a post upserts a `view_history` row; video
+  playback position is saved on a throttle (a 5s timer plus a final flush on
+  exit, so we never write every second) and restored on the next open. The
+  Home "تابِع ما بدأته" row now reflects real history, newest first, with the
+  saved resume position shown where available.
+- **Playlists tab:** lists published playlists (cached cover images); the
+  detail screen shows posts in order with per-post progress (viewed/resume)
+  and "اكتمل X من N".
+- **Sequential playback:** opening a post from a playlist carries a
+  `PlaylistContext`; a bottom bar advances to the next lesson, and finishing a
+  video auto-advances (inline end-of-stream / YouTube `ended` state).
+- New layers: `PlaylistRepository` + providers, `view_history` write methods,
+  a `PostView` (detail + resume) provider. Unit tests cover the sequential
+  `PlaylistContext` logic; `flutter analyze` clean, all tests pass.
+
+### Phase 6 — Achievement celebrations (current)
+
+- **Server-side detection** (`/supabase` migration `…000400`): a lightweight
+  `student_activity` day-log (for streaks), the starter achievement set
+  (first view, 5 & 25 views, 5-day streak, first playlist completed), and a
+  SECURITY DEFINER `claim_achievements()` RPC that records activity, grants any
+  newly-earned achievements, and **returns just those** so the client can
+  celebrate them. Detection is authoritative in Postgres; the client can only
+  ask the server to evaluate. Validated end-to-end on Postgres 16.
+- **Triggering:** the app calls `claim()` on app open (covers streaks) and
+  after each post view (covers view counts + playlist completion); a Riverpod
+  queue surfaces unlocks one at a time.
+- **Celebration overlay:** confetti (`confetti`), a scaling + glowing badge and
+  staggered text via Flutter's animation framework (elastic/eased `Interval`s),
+  Lottie accent rings (`lottie`, with a graceful fallback), and a haptic. It's
+  generic over `CelebrationData`, so new achievements need no overlay changes.
+- **Why these tools:** Flutter's framework drives the transition choreography
+  (full control, no assets); `confetti` for physics-based particles; **Lottie**
+  for the vector accent (text-based JSON, designer-replaceable). **Rive** was
+  skipped — it needs a binary `.riv` authored in its editor, whereas a Lottie
+  JSON is reviewable/editable in-repo.
+- **Achievements screen** in Profile: a grid of earned (colorful, pop-in) and
+  locked (muted) badges. **Reduce-motion** is respected everywhere (no
+  confetti/Lottie/scale; a settled, static presentation instead).
+- `flutter analyze` clean; widget + unit tests pass (incl. an overlay render
+  test and the SQL engine validation).
+
 ### Next up
 
-- Scaffold the three projects (Flutter app, web admin, Supabase init).
-- Decide on the web admin framework.
+- Initialize the Supabase CLI project / link to a hosted project.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.
-- When scaffolding, set `ar` / RTL defaults and bundle the Arabic font.
+- Run the full app on a device/emulator and wire it to a hosted Supabase
+  project (only `flutter analyze` + tests run in this container).

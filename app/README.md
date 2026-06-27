@@ -12,19 +12,94 @@ to browse and consume the content the teacher publishes.
 - Follow playlists (ordered collections of posts).
 - Show celebration animations when a student reaches an achievement.
 
+## Stack
+
+- **Flutter** (Dart), Android + iOS
+- **Riverpod** (`flutter_riverpod`) for state management
+- **supabase_flutter** for auth, data, and storage against the `/supabase` backend
+- Bundled **Cairo** Arabic font (`assets/fonts`)
+- Media: **video_player** + **chewie** (inline video), **youtube_player_flutter**
+  (YouTube), **pdfx** (in-app PDF), **url_launcher** (external/other files),
+  **flutter_markdown** (post body), **cached_network_image** (lazy images)
+- Celebrations: **confetti** (particles) + **lottie** (vector accent), on top of
+  Flutter's animation framework
+
+### Why Riverpod
+
+Compile-safe dependency injection without `BuildContext`, trivial provider
+overrides for testing, and first-class async/stream support — a natural fit for
+Supabase auth state and the data streams later screens will consume. It scales
+cleanly as features grow.
+
+## Architecture
+
+Feature-first, with a clear separation of concerns:
+
+```
+lib/
+  main.dart                  app entry; initializes Supabase
+  src/
+    app.dart                 MaterialApp (ar locale, RTL, theme)
+    core/
+      supabase/              client wrapper + config + provider
+      theme/                 colors, spacing, typography, theme (one source)
+      widgets/               shared widgets
+    models/                  plain data models (e.g. Profile)
+    features/<feature>/
+      data/                  repositories (Supabase calls)
+      application/           Riverpod providers / controllers
+      presentation/          screens & widgets
+```
+
+Features: `auth`, `shell`, `home`, `browse`, `playlists`, `profile`.
+
 ## Language & direction
 
-**Arabic-first and RTL by default** (`MaterialApp(locale: Locale('ar'))`,
-`TextDirection.rtl`). Use direction-aware widgets (`EdgeInsetsDirectional`,
-`AlignmentDirectional`, `start` / `end`), bundle an Arabic font, route all
-strings through localization, and flip directional icons/progress for RTL.
+**Arabic-first and RTL by default**: `MaterialApp(locale: Locale('ar'))` plus
+the Global Material/Widgets/Cupertino localizations drive RTL across the app.
+All copy is Arabic; the bundled Cairo font is used throughout. Use
+direction-aware widgets (`EdgeInsetsDirectional`, `start`/`end`) in new screens.
 See `/CLAUDE.md` → *Language & direction*.
 
-## Backend
+## Getting started
 
-Talks to the shared Supabase project (see `/supabase`) for auth, data, and file
-storage.
+Requires the Flutter SDK. Credentials are passed at run time (never committed):
 
-## Status
+```bash
+cd app
+flutter pub get
+cp dart_define.example.json dart_define.json   # fill in your Supabase values
+flutter run --dart-define-from-file=dart_define.json
+```
 
-Not scaffolded yet. The Flutter project will be created in a later phase.
+`dart_define.json` provides:
+
+```
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your-anon-public-key   # Supabase's "publishable" key
+```
+
+Without credentials the app launches to a "not configured" screen. With them you
+get the welcome → sign-up/sign-in flow; sessions persist across launches.
+
+Checks: `flutter analyze`, `flutter test`.
+
+## What's built
+
+- **Foundation (Phase 3):** auth flow, session persistence, the themed app
+  shell with bottom-nav tabs, and the data/state plumbing.
+- **Content browsing (Phase 4):** Home (continue + recent), Browse
+  (categories → subcategories → posts, tag filter), and the post viewer
+  (markdown body; inline video for stored/direct files, embedded YouTube,
+  external open for Vimeo/unknown; in-app PDF; file open/download). Only
+  published content is ever requested; every screen handles loading / empty /
+  error, and lists load lazily.
+- **Tracking & playlists (Phase 5):** opening a post records it in
+  `view_history`; video position is saved on a throttle and restored next time.
+  The Playlists tab lists published playlists; its detail screen shows ordered
+  posts with progress and supports sequential play-through (a "next lesson"
+  bar, plus auto-advance when a video ends).
+- **Achievements (Phase 6):** the server detects unlocks (`claim_achievements`
+  RPC) and the app celebrates them with a full-screen overlay (confetti, a
+  glowing badge, Lottie accents, haptics) and an Achievements grid in Profile.
+  Reduce-motion is respected throughout.

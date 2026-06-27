@@ -1,0 +1,49 @@
+name: teacher_cms_app
+description: "تطبيق الطالب للمحتوى التعليمي"
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  supabase_flutter: ^2.8.0
+  flutter_markdown: ^0.7.7+1
+  url_launcher: ^6.3.2
+  cached_network_image: ^3.4.1
+  http: ^1.6.0
+  video_player: ^2.11.1
+  chewie: ^1.14.1
+  youtube_player_flutter: ^10.0.1
+  pdfx: ^2.9.2
+  confetti: ^0.8.0
+  lottie: ^3.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/lottie/celebration.json
+
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Cairo-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Cairo-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
