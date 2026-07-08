@@ -11,6 +11,17 @@ export interface Profile {
   avatar_url: string | null
 }
 
+// A student account as returned by the /api/students serverless function
+// (a merge of auth.users + the profiles row). Managed only via that endpoint.
+export interface StudentAccount {
+  id: string
+  username: string
+  display_name: string | null
+  created_at: string
+  last_sign_in_at: string | null
+  disabled: boolean
+}
+
 export interface Category {
   id: string
   name: string

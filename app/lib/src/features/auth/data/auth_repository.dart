@@ -15,19 +15,7 @@ class AuthRepository {
     await _client.auth.signInWithPassword(email: email, password: password);
   }
 
-  Future<void> signUp({
-    required String email,
-    required String password,
-    String? displayName,
-  }) async {
-    await _client.auth.signUp(
-      email: email,
-      password: password,
-      data: (displayName == null || displayName.isEmpty)
-          ? null
-          : {'display_name': displayName},
-    );
-  }
+  // No sign-up: the teacher creates every student account from the admin portal.
 
   Future<void> signOut() => _client.auth.signOut();
 }

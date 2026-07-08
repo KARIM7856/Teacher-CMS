@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/supabase/supabase_config.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../auth/application/auth_providers.dart';
-import '../../auth/presentation/welcome_screen.dart';
+import '../../auth/presentation/sign_in_screen.dart';
 import 'home_shell.dart';
 
 /// Top-level router: shows the auth flow or the signed-in shell based on the
@@ -20,9 +20,9 @@ class RootScreen extends ConsumerWidget {
     final AsyncValue<Object?> auth = ref.watch(authStateProvider);
     return auth.when(
       data: (session) =>
-          session == null ? const WelcomeScreen() : const HomeShell(),
+          session == null ? const SignInScreen() : const HomeShell(),
       loading: () => const _SplashScreen(),
-      error: (_, __) => const WelcomeScreen(),
+      error: (_, __) => const SignInScreen(),
     );
   }
 }

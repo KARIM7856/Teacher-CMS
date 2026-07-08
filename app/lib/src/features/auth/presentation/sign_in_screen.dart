@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/auth_config.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../application/auth_providers.dart';
 import 'auth_error_message.dart';
+
+final _usernameRe = RegExp(r'^[a-z0-9._-]{3,30}$');
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -14,24 +17,25 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  final _username = TextEditingController();
   final _password = TextEditingController();
 
   @override
   void dispose() {
-    _email.dispose();
+    _username.dispose();
     _password.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    // The account is email-based under the hood; map the username to its
+    // synthetic email before signing in (see kStudentEmailDomain).
     final bool ok = await ref.read(authControllerProvider.notifier).signIn(
-          email: _email.text.trim(),
+          email: studentEmailForUsername(_username.text),
           password: _password.text,
         );
-    // On success the auth stream updates and RootScreen swaps to the shell;
-    // popping this route reveals it.
+    // On success the auth stream updates and RootScreen swaps to the shell.
     if (ok && mounted) Navigator.of(context).pop();
   }
 
@@ -57,12 +61,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _username,
+                  keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'بريد إلكتروني غير صالح' : null,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  decoration: const InputDecoration(labelText: 'اسم المستخدم'),
+                  validator: (v) => _usernameRe.hasMatch((v ?? '').trim().toLowerCase())
+                      ? null
+                      : 'اسم مستخدم غير صالح',
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(

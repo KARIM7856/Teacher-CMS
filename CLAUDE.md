@@ -205,7 +205,7 @@ each phase.**
   a `PostView` (detail + resume) provider. Unit tests cover the sequential
   `PlaylistContext` logic; `flutter analyze` clean, all tests pass.
 
-### Phase 6 — Achievement celebrations (current)
+### Phase 6 — Achievement celebrations
 
 - **Server-side detection** (`/supabase` migration `…000400`): a lightweight
   `student_activity` day-log (for streaks), the starter achievement set
@@ -232,8 +232,40 @@ each phase.**
 - `flutter analyze` clean; widget + unit tests pass (incl. an overlay render
   test and the SQL engine validation).
 
+### Phase 7 — Teacher-managed student accounts (current)
+
+- **Access model flip:** the app no longer self-registers students. The teacher
+  (super admin) creates every account from the admin portal; the app has **no
+  sign-up flow** — only sign-in.
+- **Username login:** students sign in with a *username* + password (not email).
+  Each username maps to a deterministic synthetic email
+  `‹username›@‹kStudentEmailDomain›` (constant in `app/lib/src/core/config/
+  auth_config.dart`, mirrored by the function's `STUDENT_EMAIL_DOMAIN`) so
+  Supabase Auth stays email-based under the hood. App changes: sign-up screen +
+  `signUp` methods removed, `welcome_screen` deleted, `RootScreen` routes
+  straight to `SignInScreen`, sign-in field is now a username.
+- **Secure backend:** a **Vercel serverless function** (`admin/api/students.ts`)
+  holds the `service_role` key (server-only env) and is the *only* thing that
+  creates/modifies auth users. It verifies the caller's admin JWT on every
+  request and refuses to touch non-student accounts. Actions: `list` (merges
+  `auth.users` + `profiles`), `create` (Admin API, `email_confirm:true` — also
+  sidesteps the NULL-token login-500), `reset_password`, `rename`,
+  `set_disabled` (ban/unban), `delete`. No DB migration needed — the existing
+  `on_auth_user_created` trigger still makes the profile row.
+- **Admin UI:** a new "الطلاب" page (`StudentsListPage`) + `src/api/students.ts`
+  wrappers (forward the admin JWT to the function). Create/reset show a copyable
+  credentials hand-off dialog (no email is sent). `vercel.json` rewrite tightened
+  to `/((?!api/).*)` so it can't shadow the function.
+- **Config (manual):** disable "Allow new users to sign up" in the Supabase
+  Auth dashboard (authoritative lock); set `SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `STUDENT_EMAIL_DOMAIN` as Vercel env vars.
+- `flutter analyze` + tests pass; admin `tsc`/build green; the function
+  typechecks standalone.
+
 ### Next up
 
+- Deploy the admin portal to Vercel (set the four env vars) and flip off public
+  sign-ups; then create the first students and verify app login end-to-end.
 - Initialize the Supabase CLI project / link to a hosted project.
 - Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
   Arabic-Indic `٠-٩`), and whether a second language is ever in scope.

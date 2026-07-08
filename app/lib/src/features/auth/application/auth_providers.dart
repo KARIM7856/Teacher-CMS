@@ -18,8 +18,9 @@ final authStateProvider = StreamProvider<Session?>((ref) async* {
   yield* repo.onAuthStateChange.map((AuthState event) => event.session);
 });
 
-/// Drives the sign-in / sign-up / sign-out actions and exposes their
-/// loading + error state to the UI via [AsyncValue].
+/// Drives the sign-in / sign-out actions and exposes their loading + error
+/// state to the UI via [AsyncValue]. (There is no sign-up — the teacher creates
+/// student accounts from the admin portal.)
 class AuthController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
@@ -28,22 +29,6 @@ class AuthController extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
       () => ref.read(authRepositoryProvider).signIn(email: email, password: password),
-    );
-    return !state.hasError;
-  }
-
-  Future<bool> signUp({
-    required String email,
-    required String password,
-    String? displayName,
-  }) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(authRepositoryProvider).signUp(
-            email: email,
-            password: password,
-            displayName: displayName,
-          ),
     );
     return !state.hasError;
   }

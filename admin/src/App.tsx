@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CategoriesPage } from './pages/CategoriesPage'
 import { TagsPage } from './pages/TagsPage'
+import { StudentsListPage } from './pages/StudentsListPage'
 import { PostsListPage } from './pages/PostsListPage'
 import { PostEditPage } from './pages/PostEditPage'
 import { PlaylistsListPage } from './pages/PlaylistsListPage'
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/tags" element={<TagsPage />} />
+        <Route path="/students" element={<StudentsListPage />} />
         <Route path="/posts" element={<PostsListPage />} />
         <Route path="/posts/new" element={<PostEditPage />} />
         <Route path="/posts/:id/edit" element={<PostEditPage />} />
