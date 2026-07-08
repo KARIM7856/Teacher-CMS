@@ -279,3 +279,11 @@ grant select, insert, update, delete on all tables in schema public to authentic
 grant all on all tables in schema public to service_role;
 grant execute on function public.is_admin()        to anon, authenticated;
 grant execute on function public.normalize_arabic(text) to anon, authenticated;
+
+-- GoTrue runs as `supabase_auth_admin` and fires on_auth_user_created (which calls
+-- public.handle_new_user) whenever it inserts a new auth user. That role therefore
+-- needs to see the public schema and execute the function; without these grants,
+-- GoTrue can't reflect the auth schema and every auth request (login included)
+-- fails with "Database error querying schema".
+grant usage on schema public to supabase_auth_admin;
+grant execute on function public.handle_new_user() to supabase_auth_admin;
