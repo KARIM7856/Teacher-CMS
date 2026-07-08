@@ -3,12 +3,14 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 import '../../../../models/media_item.dart';
 import 'external_media_button.dart';
+import 'google_drive_video_player.dart';
 import 'inline_video_player.dart';
 import 'youtube_video_player.dart';
 
 /// Picks the right player for a video [MediaItem] based on its source:
 ///   * stored object / direct file URL → inline Chewie player
 ///   * YouTube link                    → embedded YouTube player
+///   * Google Drive link               → embedded Drive preview (WebView)
 ///   * Vimeo / unrecognized            → "open externally" fallback
 class VideoPlayerView extends StatelessWidget {
   const VideoPlayerView({
@@ -52,6 +54,17 @@ class VideoPlayerView extends StatelessWidget {
           onPositionChanged: onPositionChanged,
           onCompleted: onCompleted,
         );
+
+      case VideoSource.googleDrive:
+        final String? fileId = item.googleDriveFileId;
+        if (fileId == null) {
+          return ExternalMediaButton(
+            url: item.externalUrl!,
+            label: 'افتح الفيديو',
+            icon: Icons.play_circle_outline_rounded,
+          );
+        }
+        return GoogleDriveVideoPlayer(fileId: fileId);
 
       case VideoSource.vimeo:
       case VideoSource.unknown:

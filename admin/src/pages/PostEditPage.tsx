@@ -8,6 +8,7 @@ import {
   FileButton,
   Group,
   LoadingOverlay,
+  Modal,
   MultiSelect,
   Select,
   Stack,
@@ -25,6 +26,7 @@ import {
   IconDeviceFloppy,
   IconExternalLink,
   IconGripVertical,
+  IconLink,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react'
@@ -36,6 +38,7 @@ import { listAllSubcategories, listCategories } from '../api/categories'
 import { listTags } from '../api/tags'
 import { createPost, getPost, getPostTagIds, setPostTags, updatePost } from '../api/posts'
 import {
+  addExternalMedia,
   deleteMedia,
   getMediaSignedUrl,
   guessMediaType,
@@ -76,6 +79,13 @@ export function PostEditPage() {
   const [allSubs, setAllSubs] = useState<Subcategory[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [media, setMedia] = useState<Media[]>([])
+
+  // "Add external link" modal (YouTube / Google Drive / any URL).
+  const [linkOpen, setLinkOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkTitle, setLinkTitle] = useState('')
+  const [linkType, setLinkType] = useState<MediaType>('video')
+  const [linkSaving, setLinkSaving] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -167,6 +177,36 @@ export function PostEditPage() {
       await reloadMedia(postId)
     } catch (e) {
       showError(e)
+    }
+  }
+
+  function openLinkModal() {
+    setLinkUrl('')
+    setLinkTitle('')
+    setLinkType('video')
+    setLinkOpen(true)
+  }
+
+  async function handleAddLink() {
+    if (!postId) return
+    const url = linkUrl.trim()
+    if (!url) {
+      notifications.show({ color: 'red', message: 'أدخل رابطًا' })
+      return
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      notifications.show({ color: 'red', message: 'يجب أن يبدأ الرابط بـ http أو https' })
+      return
+    }
+    setLinkSaving(true)
+    try {
+      await addExternalMedia(postId, { url, type: linkType, displayName: linkTitle })
+      await reloadMedia(postId)
+      setLinkOpen(false)
+    } catch (e) {
+      showError(e)
+    } finally {
+      setLinkSaving(false)
     }
   }
 
@@ -293,18 +333,28 @@ export function PostEditPage() {
       <Card withBorder p="lg">
         <Group justify="space-between" mb="sm">
           <Title order={4}>الملفات والوسائط</Title>
-          <FileButton multiple onChange={handleUpload} disabled={!postId}>
-            {(props) => (
-              <Button
-                {...props}
-                variant="light"
-                leftSection={<IconUpload size={16} />}
-                disabled={!postId}
-              >
-                رفع ملفات
-              </Button>
-            )}
-          </FileButton>
+          <Group gap="xs">
+            <Button
+              variant="light"
+              leftSection={<IconLink size={16} />}
+              disabled={!postId}
+              onClick={openLinkModal}
+            >
+              إضافة رابط
+            </Button>
+            <FileButton multiple onChange={handleUpload} disabled={!postId}>
+              {(props) => (
+                <Button
+                  {...props}
+                  variant="light"
+                  leftSection={<IconUpload size={16} />}
+                  disabled={!postId}
+                >
+                  رفع ملفات
+                </Button>
+              )}
+            </FileButton>
+          </Group>
         </Group>
         {!postId && (
           <Text size="sm" c="dimmed">
@@ -331,7 +381,7 @@ export function PostEditPage() {
                   <IconGripVertical size={16} />
                 </ActionIcon>
                 <Text size="sm" truncate>
-                  {m.display_name ?? m.storage_path}
+                  {m.display_name ?? m.external_url ?? m.storage_path}
                 </Text>
               </Group>
               <Group gap="xs" wrap="nowrap">
@@ -354,6 +404,43 @@ export function PostEditPage() {
           )}
         />
       </Card>
+
+      <Modal opened={linkOpen} onClose={() => setLinkOpen(false)} title="إضافة رابط خارجي" centered>
+        <Stack>
+          <TextInput
+            label="الرابط"
+            required
+            placeholder="https://youtu.be/... أو https://drive.google.com/file/d/..."
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.currentTarget.value)}
+          />
+          <TextInput
+            label="العنوان (اختياري)"
+            placeholder="اسم يظهر فوق المشغّل"
+            value={linkTitle}
+            onChange={(e) => setLinkTitle(e.currentTarget.value)}
+          />
+          <Select
+            label="النوع"
+            data={MEDIA_TYPE_OPTIONS}
+            value={linkType}
+            onChange={(v) => v && setLinkType(v as MediaType)}
+            allowDeselect={false}
+          />
+          <Text size="xs" c="dimmed">
+            روابط يوتيوب وجوجل درايف تُشغَّل داخل التطبيق. لِتعمل روابط جوجل درايف، اضبط
+            مشاركة الملف على «أي شخص لديه الرابط».
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setLinkOpen(false)}>
+              إلغاء
+            </Button>
+            <Button loading={linkSaving} onClick={handleAddLink}>
+              إضافة
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   )
 }

@@ -14,7 +14,7 @@ enum MediaType {
 
 /// How a video should be presented, derived from its URL. Lets the detail
 /// screen pick the right player without the widget re-parsing URLs.
-enum VideoSource { youtube, vimeo, directFile, storage, unknown }
+enum VideoSource { youtube, googleDrive, vimeo, directFile, storage, unknown }
 
 /// A file attached to a post: a video, a PDF, or some other downloadable file.
 /// Mirrors `public.media`. Exactly one of [storagePath] / [externalUrl] is set
@@ -70,6 +70,7 @@ class MediaItem {
     if (lower.contains('youtube.com') || lower.contains('youtu.be')) {
       return VideoSource.youtube;
     }
+    if (lower.contains('drive.google.com')) return VideoSource.googleDrive;
     if (lower.contains('vimeo.com')) return VideoSource.vimeo;
 
     final Uri? uri = Uri.tryParse(url);
@@ -79,5 +80,20 @@ class MediaItem {
       return VideoSource.directFile;
     }
     return VideoSource.unknown;
+  }
+
+  /// The Drive file id for a Google Drive video URL, or null if it can't be
+  /// parsed. Handles the common share forms: `/file/d/‹id›/view`,
+  /// `?id=‹id›`, and `open?id=‹id›`.
+  String? get googleDriveFileId {
+    final String? url = externalUrl;
+    if (url == null || url.isEmpty) return null;
+
+    final RegExpMatch? inPath = RegExp(r'/file/d/([a-zA-Z0-9_-]+)').firstMatch(url);
+    if (inPath != null) return inPath.group(1);
+
+    final String? idParam = Uri.tryParse(url)?.queryParameters['id'];
+    if (idParam != null && idParam.isNotEmpty) return idParam;
+    return null;
   }
 }

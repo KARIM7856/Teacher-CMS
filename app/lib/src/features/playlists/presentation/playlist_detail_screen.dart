@@ -72,15 +72,16 @@ class PlaylistDetailScreen extends ConsumerWidget {
             );
           }
 
-          final Map<String, int> progress = ref
+          final Map<String, ({bool seen, int progressSeconds})> progress = ref
               .watch(playlistProgressProvider(playlistId))
               .maybeWhen(data: (value) => value, orElse: () => const {});
 
+          bool isSeen(String postId) => progress[postId]?.seen ?? false;
+
           final int viewedCount =
-              data.posts.where((post) => progress.containsKey(post.id)).length;
-          final int startIndex = data.posts.indexWhere(
-            (post) => !progress.containsKey(post.id),
-          );
+              data.posts.where((post) => isSeen(post.id)).length;
+          final int startIndex =
+              data.posts.indexWhere((post) => !isSeen(post.id));
           final int resumeIndex = startIndex == -1 ? 0 : startIndex;
 
           return ListView(
@@ -97,8 +98,8 @@ class PlaylistDetailScreen extends ConsumerWidget {
                 _PlaylistPostTile(
                   index: i,
                   title: data.posts[i].title,
-                  progressSeconds: progress[data.posts[i].id],
-                  viewed: progress.containsKey(data.posts[i].id),
+                  progressSeconds: progress[data.posts[i].id]?.progressSeconds,
+                  viewed: isSeen(data.posts[i].id),
                   onTap: () => _openAt(context, ref, data, i),
                 ),
             ],

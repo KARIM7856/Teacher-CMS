@@ -11,7 +11,7 @@
 -- Depends on: pgcrypto in the "extensions" schema + the on_auth_user_created
 -- trigger (both created by the core migrations / _full_setup_hosted.sql).
 -- ============================================================================
-
+Set-Location 'd:\REPOS\Personal\Teacher-CMS\app'; & C:\src\flutter\bin\flutter.bat install --release -d R5CXA2NELLR
 do $$
 declare
   v_email    text := 'mohamedhassan9082@gmail.com';

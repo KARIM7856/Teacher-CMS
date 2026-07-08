@@ -44,6 +44,28 @@ export async function uploadMedia(postId: string, file: File, type: MediaType): 
   return data as Media
 }
 
+/** Attaches an external link (e.g. a YouTube or Google Drive video) to a post.
+ * No file is uploaded — only the URL is stored in `external_url`. */
+export async function addExternalMedia(
+  postId: string,
+  input: { url: string; type: MediaType; displayName?: string | null },
+): Promise<Media> {
+  const existing = await listMedia(postId)
+  const { data, error } = await supabase
+    .from('media')
+    .insert({
+      post_id: postId,
+      type: input.type,
+      external_url: input.url.trim(),
+      display_name: input.displayName?.trim() || null,
+      sort_order: existing.length,
+    })
+    .select('*')
+    .single()
+  if (error) throw error
+  return data as Media
+}
+
 export async function updateMedia(
   id: string,
   patch: Partial<Pick<Media, 'type' | 'display_name'>>,

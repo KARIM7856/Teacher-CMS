@@ -19,11 +19,12 @@ final playlistDetailProvider =
   return ref.watch(playlistRepositoryProvider).fetchPlaylistDetail(playlistId);
 });
 
-/// For each post in a playlist, the student's saved progress (presence = viewed).
+/// For each post in a playlist, the student's seen flag + saved resume position.
 /// Kept separate from the playlist detail so it can be refreshed on its own
 /// after the student returns from a post.
-final playlistProgressProvider =
-    FutureProvider.autoDispose.family<Map<String, int>, String>((ref, playlistId) async {
+final playlistProgressProvider = FutureProvider.autoDispose
+    .family<Map<String, ({bool seen, int progressSeconds})>, String>(
+        (ref, playlistId) async {
   final detail = await ref.watch(playlistDetailProvider(playlistId).future);
   final List<String> postIds = detail.posts.map((post) => post.id).toList();
   return ref.watch(viewHistoryRepositoryProvider).fetchProgressForPosts(postIds);

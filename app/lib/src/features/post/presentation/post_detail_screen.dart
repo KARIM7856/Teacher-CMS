@@ -63,6 +63,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   int _lastSavedSeconds = -1;
   bool _advanced = false;
 
+  // The student decides when a post counts as seen (the button below). Held
+  // locally for instant feedback; `null` means "use the loaded value".
+  bool? _seenOverride;
+
   @override
   void initState() {
     super.initState();
@@ -71,18 +75,41 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     _saveTimer = Timer.periodic(_saveInterval, (_) => _flushProgress());
   }
 
+  /// Opening a post marks it "started" so it appears in the Home "continue" row
+  /// until the student marks it seen. This is not the same as seen — no
+  /// achievements are evaluated here (that happens on the manual seen action).
   Future<void> _recordOpen() async {
-    await _history.recordView(widget.postId);
+    await _history.markStarted(widget.postId);
+    if (mounted) ref.invalidate(continueLearningProvider);
+  }
+
+  /// Toggles the manual "seen" state. Marking seen records the view (which
+  /// surfaces it on Home / playlist progress and evaluates achievements);
+  /// un-marking removes the row.
+  Future<void> _toggleSeen(bool currentlySeen) async {
+    final bool next = !currentlySeen;
+    setState(() => _seenOverride = next);
+    try {
+      if (next) {
+        await _history.markSeen(widget.postId);
+      } else {
+        await _history.unmarkSeen(widget.postId);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _seenOverride = currentlySeen); // revert
+      return;
+    }
     if (!mounted) return;
-    // Surface this view on the Home "continue" row and any playlist progress.
     ref.invalidate(continueLearningProvider);
     final PlaylistContext? playlist = widget.playlistContext;
     if (playlist != null) {
       ref.invalidate(playlistProgressProvider(playlist.playlistId));
     }
-    // Evaluate achievements now that this post is in the student's history
-    // (covers "first view", view-count milestones, and playlist completion).
-    ref.read(celebrationControllerProvider.notifier).claim();
+    if (next) {
+      // Newly seen — let the server grant any earned achievements (first view,
+      // view-count milestones, playlist completion).
+      ref.read(celebrationControllerProvider.notifier).claim();
+    }
   }
 
   // High-frequency ticks only update memory; the timer/dispose do the writing.
@@ -130,12 +157,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       body: AsyncValueWidget<PostView>(
         value: view,
         onRetry: () => ref.invalidate(postViewProvider(widget.postId)),
-        data: (PostView postView) => _PostBody(
-          detail: postView.detail,
-          resumeSeconds: postView.resumeSeconds,
-          onVideoProgress: _onProgress,
-          onVideoCompleted: playlist != null ? _goToNext : null,
-        ),
+        data: (PostView postView) {
+          final bool seen = _seenOverride ?? postView.seen;
+          return _PostBody(
+            detail: postView.detail,
+            resumeSeconds: postView.resumeSeconds,
+            seen: seen,
+            onToggleSeen: () => _toggleSeen(seen),
+            onVideoProgress: _onProgress,
+            onVideoCompleted: playlist != null ? _goToNext : null,
+          );
+        },
       ),
       bottomNavigationBar: playlist == null
           ? null
@@ -148,12 +180,16 @@ class _PostBody extends StatelessWidget {
   const _PostBody({
     required this.detail,
     required this.resumeSeconds,
+    required this.seen,
+    required this.onToggleSeen,
     this.onVideoProgress,
     this.onVideoCompleted,
   });
 
   final PostDetail detail;
   final int resumeSeconds;
+  final bool seen;
+  final VoidCallback onToggleSeen;
   final void Function(Duration position)? onVideoProgress;
   final VoidCallback? onVideoCompleted;
 
@@ -180,6 +216,8 @@ class _PostBody extends StatelessWidget {
             ],
           ),
         ],
+        const SizedBox(height: AppSpacing.md),
+        _SeenButton(seen: seen, onToggle: onToggleSeen),
         if (body != null && body.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.lg),
           MarkdownBody(
@@ -199,6 +237,31 @@ class _PostBody extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// The manual "seen" control. Filled + checked once the student marks the post
+/// seen; tap again to un-mark.
+class _SeenButton extends StatelessWidget {
+  const _SeenButton({required this.seen, required this.onToggle});
+
+  final bool seen;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget child = seen
+        ? FilledButton.icon(
+            onPressed: onToggle,
+            icon: const Icon(Icons.check_circle_rounded),
+            label: const Text('تمّت المشاهدة'),
+          )
+        : OutlinedButton.icon(
+            onPressed: onToggle,
+            icon: const Icon(Icons.check_circle_outline_rounded),
+            label: const Text('تحديد كمشاهَد'),
+          );
+    return SizedBox(width: double.infinity, child: child);
   }
 }
 

@@ -31,6 +31,18 @@ void main() {
           VideoSource.youtube);
     });
 
+    test('Google Drive links use the Drive player', () {
+      expect(
+        video(externalUrl: 'https://drive.google.com/file/d/ABC123_x-y/view?usp=sharing')
+            .videoSource,
+        VideoSource.googleDrive,
+      );
+      expect(
+        video(externalUrl: 'https://drive.google.com/open?id=ABC123_x-y').videoSource,
+        VideoSource.googleDrive,
+      );
+    });
+
     test('Vimeo falls back to opening externally', () {
       expect(video(externalUrl: 'https://vimeo.com/123456').videoSource,
           VideoSource.vimeo);
@@ -46,6 +58,28 @@ void main() {
     test('an unrecognized page URL is treated as unknown', () {
       expect(video(externalUrl: 'https://example.com/watch/page').videoSource,
           VideoSource.unknown);
+    });
+  });
+
+  group('MediaItem.googleDriveFileId', () {
+    test('parses the id from the /file/d/ share form', () {
+      expect(
+        video(externalUrl: 'https://drive.google.com/file/d/ABC123_x-y/view?usp=sharing')
+            .googleDriveFileId,
+        'ABC123_x-y',
+      );
+    });
+
+    test('parses the id from an ?id= query form', () {
+      expect(
+        video(externalUrl: 'https://drive.google.com/open?id=ABC123_x-y').googleDriveFileId,
+        'ABC123_x-y',
+      );
+    });
+
+    test('returns null when there is no id', () {
+      expect(video(externalUrl: 'https://drive.google.com/drive/my-drive').googleDriveFileId,
+          isNull);
     });
   });
 }
