@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Arabic is the app's default locale, so the launcher label lives here in the
+     default resource set rather than a values-ar/ override. -->
+<resources>
+    <string name="app_name">منصة المعلم</string>
+</resources>
