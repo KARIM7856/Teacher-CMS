@@ -73,6 +73,33 @@ async function assertTargetIsStudent(admin: SupabaseClient, userId: string): Pro
   if (data.role !== 'student') throw new HttpError(403, 'لا يمكن تعديل هذا الحساب')
 }
 
+// Optional list of group ids (deduped). Used on create and set_groups. Group
+// definitions live in the `groups` table, managed directly from the SPA.
+function parseGroupIds(raw: unknown): string[] {
+  if (raw == null) return []
+  if (!Array.isArray(raw)) throw new HttpError(400, 'قائمة المجموعات غير صالحة')
+  const ids = raw.map((v) => String(v ?? '').trim()).filter(Boolean)
+  return Array.from(new Set(ids))
+}
+
+// Replace a student's group memberships with exactly [groupIds] (empty clears them).
+async function replaceMemberships(
+  admin: SupabaseClient,
+  userId: string,
+  groupIds: string[],
+): Promise<void> {
+  const { error: delError } = await admin
+    .from('group_members')
+    .delete()
+    .eq('student_id', userId)
+  if (delError) throw new HttpError(400, delError.message)
+  if (groupIds.length === 0) return
+  const rows = groupIds.map((group_id) => ({ group_id, student_id: userId }))
+  const { error: insError } = await admin.from('group_members').insert(rows)
+  // A bad/unknown group id trips the FK — report it rather than 500.
+  if (insError) throw new HttpError(400, 'تعذّر تعيين المجموعات: ' + insError.message)
+}
+
 // ── Actions ──────────────────────────────────────────────────────────────────────
 
 async function listStudents(admin: SupabaseClient) {
@@ -83,6 +110,23 @@ async function listStudents(admin: SupabaseClient) {
   if (profilesError) throw new HttpError(500, profilesError.message)
   const byId = new Map(profiles.map((p) => [p.id, p]))
 
+  // Group memberships, resolved to {id, name} per student.
+  const { data: groupRows, error: groupsError } = await admin.from('groups').select('id, name')
+  if (groupsError) throw new HttpError(500, groupsError.message)
+  const groupName = new Map((groupRows ?? []).map((g) => [g.id as string, g.name as string]))
+  const { data: memberships, error: membersError } = await admin
+    .from('group_members')
+    .select('group_id, student_id')
+  if (membersError) throw new HttpError(500, membersError.message)
+  const groupsByStudent = new Map<string, Array<{ id: string; name: string }>>()
+  for (const m of memberships ?? []) {
+    const name = groupName.get(m.group_id as string)
+    if (!name) continue
+    const list = groupsByStudent.get(m.student_id as string) ?? []
+    list.push({ id: m.group_id as string, name })
+    groupsByStudent.set(m.student_id as string, list)
+  }
+
   // Page through auth users to enrich with username / timestamps / ban status.
   const students: Array<{
     id: string
@@ -91,6 +135,7 @@ async function listStudents(admin: SupabaseClient) {
     created_at: string
     last_sign_in_at: string | null
     disabled: boolean
+    groups: Array<{ id: string; name: string }>
   }> = []
   const perPage = 1000
   for (let page = 1; ; page++) {
@@ -109,6 +154,7 @@ async function listStudents(admin: SupabaseClient) {
         created_at: user.created_at,
         last_sign_in_at: user.last_sign_in_at ?? null,
         disabled: bannedUntil ? new Date(bannedUntil).getTime() > Date.now() : false,
+        groups: groupsByStudent.get(user.id) ?? [],
       })
     }
     if (data.users.length < perPage) break
@@ -122,6 +168,7 @@ async function createStudent(admin: SupabaseClient, body: Record<string, unknown
   const username = normalizeUsername(body.username)
   const password = requirePassword(body.password)
   const displayName = String(body.display_name ?? '').trim() || username
+  const groupIds = parseGroupIds(body.group_ids)
   const email = `${username}@${STUDENT_EMAIL_DOMAIN}`
 
   const { data, error } = await admin.auth.admin.createUser({
@@ -135,8 +182,18 @@ async function createStudent(admin: SupabaseClient, body: Record<string, unknown
     throw new HttpError(taken ? 409 : 400, taken ? 'اسم المستخدم مستخدم بالفعل' : error.message)
   }
   // on_auth_user_created trigger creates the profiles row (role 'student',
-  // display_name pulled from user_metadata) — nothing more to do here.
+  // display_name pulled from user_metadata) synchronously, so the FK on
+  // group_members is satisfiable by the time we assign groups.
+  if (groupIds.length > 0) await replaceMemberships(admin, data.user.id, groupIds)
   return { id: data.user.id, username }
+}
+
+async function setGroups(admin: SupabaseClient, body: Record<string, unknown>) {
+  const userId = requireUserId(body.user_id)
+  const groupIds = parseGroupIds(body.group_ids)
+  await assertTargetIsStudent(admin, userId)
+  await replaceMemberships(admin, userId, groupIds)
+  return { ok: true }
 }
 
 async function resetPassword(admin: SupabaseClient, body: Record<string, unknown>) {
@@ -231,6 +288,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(await resetPassword(admin, body))
       case 'rename':
         return res.status(200).json(await renameStudent(admin, body))
+      case 'set_groups':
+        return res.status(200).json(await setGroups(admin, body))
       case 'set_disabled':
         return res.status(200).json(await setDisabled(admin, body))
       case 'delete':

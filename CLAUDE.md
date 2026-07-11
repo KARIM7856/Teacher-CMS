@@ -262,7 +262,44 @@ each phase.**
 - `flutter analyze` + tests pass; admin `tsc`/build green; the function
   typechecks standalone.
 
+### Phase 8 — Group-based content visibility (current)
+
+- **Access model:** students belong to zero or more **groups**; each group is
+  granted **whole categories** and/or **individual subcategories**. A student
+  sees the **union** of what all their groups allow; a student in no group (or
+  whose groups grant nothing) sees **no content** — access is opt-in.
+- **Schema** (`/supabase` migration `…000600`): `groups`, `group_members`
+  (group↔student), `group_categories` (whole-category grant, incl. future
+  subcategories), `group_subcategories` (single-subcategory grant). Two
+  SECURITY DEFINER helpers — `can_see_subcategory(uuid)` /
+  `can_see_category(uuid)` — resolve visibility for `auth.uid()` (both return
+  true for admins).
+- **Enforcement is in RLS (authoritative):** the migration replaces the open
+  "read published" policies on `categories`, `subcategories`, `posts`,
+  `post_tags`, `media`, and `playlist_items` with group-gated ones. The Flutter
+  app needs **no query changes** — its existing reads inherit the filter and
+  can't widen it. Admins still bypass everything.
+- **Admin function** (`admin/api/students.ts`): `list` now returns each
+  student's groups; `create` accepts `group_ids`; new `set_groups` action
+  replaces a student's memberships (all via `service_role`, which bypasses RLS).
+- **Admin UI:** new "المجموعات" page (`GroupsListPage`) — group CRUD plus a
+  category/subcategory grant tree (check a whole category or cherry-pick
+  subcategories). `StudentsListPage` gains a groups column, a group multi-select
+  on create, and a per-student "assign groups" dialog. New `src/api/groups.ts`;
+  `groups`/grant tables are admin-managed directly via RLS (like categories).
+- Admin `tsc --noEmit` + `vite build` green; serverless function typechecks
+  standalone. **Pending:** apply `…000600` to the hosted DB and redeploy admin
+  (see *Next up*) — applying it flips every student to group-based visibility,
+  so groups must be created/assigned right after.
+
 ### Next up
+
+- **Apply the `…000600` migration to the hosted DB and redeploy the admin
+  portal**, then create groups, grant categories/subcategories, and assign
+  students. NOTE: once applied, existing students see nothing until assigned to
+  a group — do the assignments promptly.
+- (Optional) friendlier app empty-state for a student with no group yet
+  ("contact your teacher") — currently they just see an empty catalog.
 
 - Deploy the admin portal to Vercel (set the four env vars) and flip off public
   sign-ups; then create the first students and verify app login end-to-end.

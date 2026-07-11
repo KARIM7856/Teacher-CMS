@@ -20,6 +20,31 @@ export interface StudentAccount {
   created_at: string
   last_sign_in_at: string | null
   disabled: boolean
+  groups: GroupRef[]
+}
+
+// A group the student belongs to (id + name), as returned inline by `list`.
+export interface GroupRef {
+  id: string
+  name: string
+}
+
+// A content-access group. Students in a group see the categories/subcategories
+// granted to it (see group_categories / group_subcategories).
+export interface Group {
+  id: string
+  name: string
+  description: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+// The taxonomy a group is allowed to see: whole categories plus individual
+// subcategories.
+export interface GroupGrants {
+  categoryIds: string[]
+  subcategoryIds: string[]
 }
 
 export interface Category {

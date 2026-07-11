@@ -8,6 +8,7 @@ import {
   IconArticle,
   IconPlaylist,
   IconUsers,
+  IconUsersGroup,
   IconLogout,
 } from '@tabler/icons-react'
 import { useAuth } from '../auth/AuthProvider'
@@ -16,6 +17,7 @@ const NAV = [
   { to: '/', label: 'لوحة المعلومات', icon: IconLayoutDashboard, end: true },
   { to: '/categories', label: 'التصنيفات', icon: IconCategory },
   { to: '/tags', label: 'الوسوم', icon: IconTags },
+  { to: '/groups', label: 'المجموعات', icon: IconUsersGroup },
   { to: '/students', label: 'الطلاب', icon: IconUsers },
   { to: '/posts', label: 'المنشورات', icon: IconArticle },
   { to: '/playlists', label: 'قوائم التشغيل', icon: IconPlaylist },

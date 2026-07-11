@@ -33,8 +33,14 @@ export async function createStudent(input: {
   username: string
   display_name: string
   password: string
+  group_ids?: string[]
 }): Promise<{ id: string; username: string }> {
   return callStudentsApi('create', input)
+}
+
+// Replace a student's group memberships with exactly [groupIds] (empty clears them).
+export async function setStudentGroups(userId: string, groupIds: string[]): Promise<void> {
+  await callStudentsApi('set_groups', { user_id: userId, group_ids: groupIds })
 }
 
 export async function resetStudentPassword(userId: string, password: string): Promise<void> {

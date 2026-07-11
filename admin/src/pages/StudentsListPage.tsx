@@ -7,6 +7,7 @@ import {
   CopyButton,
   Group,
   Modal,
+  MultiSelect,
   Stack,
   Table,
   Text,
@@ -28,6 +29,7 @@ import {
   IconTrash,
   IconUserCheck,
   IconUserOff,
+  IconUsersGroup,
 } from '@tabler/icons-react'
 import {
   createStudent,
@@ -36,8 +38,10 @@ import {
   renameStudent,
   resetStudentPassword,
   setStudentDisabled,
+  setStudentGroups,
 } from '../api/students'
-import type { StudentAccount } from '../types/database'
+import { listGroups } from '../api/groups'
+import type { Group as GroupType, StudentAccount } from '../types/database'
 
 const USERNAME_RE = /^[a-z0-9._-]{3,30}$/
 const dateFmt = new Intl.DateTimeFormat('ar', { dateStyle: 'medium' })
@@ -60,19 +64,26 @@ function generatePassword(length = 10): string {
 
 export function StudentsListPage() {
   const [students, setStudents] = useState<StudentAccount[]>([])
+  const [groups, setGroups] = useState<GroupType[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
   const [createOpened, setCreateOpened] = useState(false)
   const [resetTarget, setResetTarget] = useState<StudentAccount | null>(null)
   const [renameTarget, setRenameTarget] = useState<StudentAccount | null>(null)
+  const [groupsTarget, setGroupsTarget] = useState<StudentAccount | null>(null)
   // Shown after create / reset so the teacher can copy the credentials to hand off.
   const [credentials, setCredentials] = useState<{ username: string; password: string } | null>(
     null,
   )
 
+  const groupOptions = useMemo(
+    () => groups.map((g) => ({ value: g.id, label: g.name })),
+    [groups],
+  )
+
   const createForm = useForm({
-    initialValues: { username: '', display_name: '', password: '' },
+    initialValues: { username: '', display_name: '', password: '', group_ids: [] as string[] },
     validate: {
       username: (v) =>
         USERNAME_RE.test(v.trim().toLowerCase())
@@ -90,11 +101,14 @@ export function StudentsListPage() {
     initialValues: { display_name: '' },
     validate: { display_name: (v) => (v.trim() ? null : 'مطلوب') },
   })
+  const groupsForm = useForm({ initialValues: { group_ids: [] as string[] } })
 
   async function reload() {
     setLoading(true)
     try {
-      setStudents(await listStudents())
+      const [studentList, groupList] = await Promise.all([listStudents(), listGroups()])
+      setStudents(studentList)
+      setGroups(groupList)
     } catch (e) {
       showError(e)
     } finally {
@@ -116,7 +130,12 @@ export function StudentsListPage() {
   }, [students, search])
 
   function openCreate() {
-    createForm.setValues({ username: '', display_name: '', password: generatePassword() })
+    createForm.setValues({
+      username: '',
+      display_name: '',
+      password: generatePassword(),
+      group_ids: [],
+    })
     setCreateOpened(true)
   }
   function openReset(s: StudentAccount) {
@@ -126,6 +145,10 @@ export function StudentsListPage() {
   function openRename(s: StudentAccount) {
     renameForm.setValues({ display_name: s.display_name ?? '' })
     setRenameTarget(s)
+  }
+  function openGroups(s: StudentAccount) {
+    groupsForm.setValues({ group_ids: s.groups.map((g) => g.id) })
+    setGroupsTarget(s)
   }
 
   function confirmToggleDisabled(s: StudentAccount) {
@@ -196,10 +219,11 @@ export function StudentsListPage() {
           <Table.Tr>
             <Table.Th>الاسم</Table.Th>
             <Table.Th>اسم المستخدم</Table.Th>
+            <Table.Th>المجموعات</Table.Th>
             <Table.Th>الحالة</Table.Th>
             <Table.Th>أُنشئ في</Table.Th>
             <Table.Th>آخر دخول</Table.Th>
-            <Table.Th w={170} />
+            <Table.Th w={210} />
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -208,6 +232,21 @@ export function StudentsListPage() {
               <Table.Td>{s.display_name ?? '—'}</Table.Td>
               <Table.Td>
                 <Text c="dimmed">{s.username || '—'}</Text>
+              </Table.Td>
+              <Table.Td>
+                {s.groups.length === 0 ? (
+                  <Text c="dimmed" size="sm">
+                    —
+                  </Text>
+                ) : (
+                  <Group gap={4}>
+                    {s.groups.map((g) => (
+                      <Badge key={g.id} variant="light" color="blue">
+                        {g.name}
+                      </Badge>
+                    ))}
+                  </Group>
+                )}
               </Table.Td>
               <Table.Td>
                 <Badge color={s.disabled ? 'red' : 'green'} variant="light">
@@ -226,6 +265,11 @@ export function StudentsListPage() {
                   <Tooltip label="تعديل الاسم">
                     <ActionIcon variant="subtle" onClick={() => openRename(s)}>
                       <IconEdit size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="المجموعات">
+                    <ActionIcon variant="subtle" onClick={() => openGroups(s)}>
+                      <IconUsersGroup size={16} />
                     </ActionIcon>
                   </Tooltip>
                   <Tooltip label={s.disabled ? 'تفعيل' : 'تعطيل'}>
@@ -248,7 +292,7 @@ export function StudentsListPage() {
           ))}
           {!loading && filtered.length === 0 && (
             <Table.Tr>
-              <Table.Td colSpan={6}>
+              <Table.Td colSpan={7}>
                 <Text c="dimmed" ta="center" py="md">
                   {students.length === 0 ? 'لا يوجد طلاب بعد' : 'لا نتائج مطابقة'}
                 </Text>
@@ -257,7 +301,7 @@ export function StudentsListPage() {
           )}
           {loading && (
             <Table.Tr>
-              <Table.Td colSpan={6}>
+              <Table.Td colSpan={7}>
                 <Text c="dimmed" ta="center" py="md">
                   جارٍ التحميل…
                 </Text>
@@ -277,6 +321,7 @@ export function StudentsListPage() {
                 username,
                 display_name: values.display_name.trim(),
                 password: values.password,
+                group_ids: values.group_ids,
               })
               setCreateOpened(false)
               setCredentials({ username, password: values.password })
@@ -311,6 +356,16 @@ export function StudentsListPage() {
                 </Tooltip>
               }
               {...createForm.getInputProps('password')}
+            />
+            <MultiSelect
+              label="المجموعات"
+              description="تحدّد ما يراه الطالب من محتوى. يمكن تركها فارغة وتعيينها لاحقًا."
+              placeholder={groupOptions.length === 0 ? 'لا توجد مجموعات بعد' : 'اختر مجموعة أو أكثر'}
+              data={groupOptions}
+              disabled={groupOptions.length === 0}
+              searchable
+              clearable
+              {...createForm.getInputProps('group_ids')}
             />
             <Button type="submit">إنشاء الحساب</Button>
           </Stack>
@@ -377,6 +432,41 @@ export function StudentsListPage() {
         >
           <Stack>
             <TextInput label="الاسم الظاهر" {...renameForm.getInputProps('display_name')} />
+            <Button type="submit">حفظ</Button>
+          </Stack>
+        </form>
+      </Modal>
+
+      {/* Assign groups */}
+      <Modal
+        opened={groupsTarget !== null}
+        onClose={() => setGroupsTarget(null)}
+        title={`المجموعات — ${groupsTarget?.display_name ?? groupsTarget?.username ?? ''}`}
+      >
+        <form
+          onSubmit={groupsForm.onSubmit(async (values) => {
+            if (!groupsTarget) return
+            try {
+              await setStudentGroups(groupsTarget.id, values.group_ids)
+              setGroupsTarget(null)
+              await reload()
+              notifications.show({ color: 'green', message: 'تم تحديث المجموعات' })
+            } catch (e) {
+              showError(e)
+            }
+          })}
+        >
+          <Stack>
+            <MultiSelect
+              label="المجموعات"
+              description="يرى الطالب اتحاد ما تسمح به كل مجموعاته."
+              placeholder={groupOptions.length === 0 ? 'لا توجد مجموعات بعد' : 'اختر مجموعة أو أكثر'}
+              data={groupOptions}
+              disabled={groupOptions.length === 0}
+              searchable
+              clearable
+              {...groupsForm.getInputProps('group_ids')}
+            />
             <Button type="submit">حفظ</Button>
           </Stack>
         </form>
