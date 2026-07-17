@@ -22,6 +22,7 @@ import {
   IconCheck,
   IconCopy,
   IconEdit,
+  IconFileSpreadsheet,
   IconKey,
   IconPlus,
   IconRefresh,
@@ -31,6 +32,7 @@ import {
   IconUserOff,
   IconUsersGroup,
 } from '@tabler/icons-react'
+import { Link } from 'react-router-dom'
 import {
   createStudent,
   deleteStudent,
@@ -201,9 +203,19 @@ export function StudentsListPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={2}>الطلاب</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          طالب جديد
-        </Button>
+        <Group gap="xs">
+          <Button
+            component={Link}
+            to="/students/import"
+            variant="light"
+            leftSection={<IconFileSpreadsheet size={16} />}
+          >
+            استيراد من Excel
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            طالب جديد
+          </Button>
+        </Group>
       </Group>
 
       <TextInput

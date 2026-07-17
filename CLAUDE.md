@@ -292,12 +292,46 @@ each phase.**
   (see *Next up*) — applying it flips every student to group-based visibility,
   so groups must be created/assigned right after.
 
+### Phase 9 — Bulk student import from Excel (current)
+
+- **Goal:** onboard a whole class at once from the teacher's roster workbook
+  instead of one-by-one. New route `/students/import` (button on the الطلاب
+  page); the `xlsx`/SheetJS parsing is **code-split** onto this route only.
+- **Workbook shape:** one sheet per class; the sheet tab's **first two words are
+  the group** (Arabic-normalized for matching). Columns located by header text —
+  `الاسم` (name), `الرقم التسلسلي` (serial), `كود الطلب` (request code),
+  `تليفون الطالب` / `تليفون ولي الأمر` (phones). Attendance grid ignored; blank
+  template sheets (e.g. `فارغ`) auto-skipped.
+- **Username** = smart first-name transliteration + a **5-digit djb2 hash of the
+  full (normalized) name**, e.g. «عبد الله أحمد» → `abdullah24819`. عبد/أبو
+  compounds stay together; a ~150-name dictionary (`src/lib/transliterate.ts`)
+  covers common Egyptian names with a per-letter rule fallback. **Password** =
+  2 letters + 6 digits. In-batch + on-server username collisions are
+  auto-disambiguated (suffix bump) and flagged live.
+- **Editable review table** (`StudentsImportPage`): grouped per source sheet,
+  shows name / **username** / **password** / phone / serial / request code, all
+  editable. Groups are **match-existing-only** — a sheet whose group isn't found
+  is flagged and its rows excluded until the teacher creates the group and hits
+  «إعادة مطابقة المجموعات» (no re-upload, edits preserved).
+- **Submit:** downloads an Excel **credentials record** (one worksheet per source
+  sheet, passwords included — they can't be recovered later), then creates each
+  account **row-by-row** via the existing `create` action, colouring the row
+  green on success / red on failure and continuing through the list.
+- **Backend:** migration `…000700` adds `profiles.serial_number` +
+  `profiles.request_code` (admin-facing; phone is shown/exported but **not**
+  stored, per choice). `api/students.ts`: `create` now persists serial/request
+  code; new **`check_usernames`** action does a bulk existence check. Admin build
+  + standalone function typecheck green; pure logic covered by an esbuild
+  self-test (usernames, password format, phone-as-decimal, sheet parsing).
+
 ### Next up
 
-- **Apply the `…000600` migration to the hosted DB and redeploy the admin
-  portal**, then create groups, grant categories/subcategories, and assign
-  students. NOTE: once applied, existing students see nothing until assigned to
-  a group — do the assignments promptly.
+- **Apply migrations `…000600` and `…000700` to the hosted DB and redeploy the
+  admin portal.** `000700` only adds two nullable `profiles` columns (safe,
+  independent of `000600`). NOTE: once `000600` is applied, existing students see
+  nothing until assigned to a group — so create groups **before** importing, and
+  do assignments promptly. The import matches sheet→group by name, so the groups
+  must exist first.
 - (Optional) friendlier app empty-state for a student with no group yet
   ("contact your teacher") — currently they just see an empty catalog.
 

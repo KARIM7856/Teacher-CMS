@@ -19,6 +19,17 @@ content for students.
 - **Dashboard** — counts of posts, playlists, categories.
 - **Categories** — categories + subcategories: create, edit, **drag-reorder**, delete.
 - **Tags** — create, edit, delete.
+- **Groups** — content-visibility groups; grant whole categories / individual
+  subcategories per group (Phase 8).
+- **Students** — teacher-managed accounts (username + password, no email/self
+  sign-up); create, reset password, rename, assign groups, disable, delete.
+  **Import from Excel** (`/students/import`): upload the class roster workbook —
+  one sheet per class, group taken from the sheet tab's first two words — and it
+  parses each student, suggests a username (first-name transliteration, e.g.
+  عبد الله → `abdullah`, plus a 5-digit hash of the full name) and an easy
+  password (2 letters + 6 digits) in an **editable table**. On submit it
+  downloads an Excel credentials record (per sheet, passwords included) then
+  creates the accounts one by one, colouring each row green on success.
 - **Posts** — list with search + filter by category/tag; editor with title,
   markdown body (edit/preview tabs), subcategory picker, tag multi-select,
   published toggle, and a **media uploader** (uploads to the Supabase Storage
@@ -64,11 +75,15 @@ src/
   auth/         AuthProvider (session + profile + admin gate)
   components/   AppLayout (RTL shell), RequireAdmin guard, SortableList
   pages/        one file per screen
-  lib/          Supabase client
+  lib/          Supabase client; transliterate + studentImport (Excel import)
   types/        row types for the schema
 ```
 
+Student-account management (create / import / reset / groups) is the one thing
+that goes through a server-side function (`api/students.ts`, Vercel) holding the
+`service_role` key — the browser never sees it. See `/CLAUDE.md` → Phases 7–9.
+
 ## Status
 
-Scaffolded with all six screens wired to Supabase (Phase 2). Typecheck and
-production build pass.
+All screens wired to Supabase; bulk **student import from Excel** added (Phase 9).
+Typecheck and production build pass (`xlsx` is code-split onto the import route).

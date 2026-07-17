@@ -34,8 +34,19 @@ export async function createStudent(input: {
   display_name: string
   password: string
   group_ids?: string[]
+  serial_number?: string | null
+  request_code?: string | null
 }): Promise<{ id: string; username: string }> {
   return callStudentsApi('create', input)
+}
+
+// Bulk existence check used by the Excel import to flag usernames already taken.
+// Returns the subset of `usernames` that already exist.
+export async function checkUsernames(usernames: string[]): Promise<string[]> {
+  const { existing } = await callStudentsApi<{ existing: string[] }>('check_usernames', {
+    usernames,
+  })
+  return existing
 }
 
 // Replace a student's group memberships with exactly [groupIds] (empty clears them).

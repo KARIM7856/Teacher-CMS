@@ -1,4 +1,6 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { Center, Loader } from '@mantine/core'
 import { AppLayout } from './components/AppLayout'
 import { RequireAdmin } from './components/RequireAdmin'
 import { LoginPage } from './pages/LoginPage'
@@ -7,6 +9,10 @@ import { CategoriesPage } from './pages/CategoriesPage'
 import { TagsPage } from './pages/TagsPage'
 import { GroupsListPage } from './pages/GroupsListPage'
 import { StudentsListPage } from './pages/StudentsListPage'
+// Code-split: this page pulls in the (heavy) xlsx library, loaded only on demand.
+const StudentsImportPage = lazy(() =>
+  import('./pages/StudentsImportPage').then((m) => ({ default: m.StudentsImportPage })),
+)
 import { PostsListPage } from './pages/PostsListPage'
 import { PostEditPage } from './pages/PostEditPage'
 import { PlaylistsListPage } from './pages/PlaylistsListPage'
@@ -28,6 +34,14 @@ export default function App() {
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/groups" element={<GroupsListPage />} />
         <Route path="/students" element={<StudentsListPage />} />
+        <Route
+          path="/students/import"
+          element={
+            <Suspense fallback={<Center h={240}><Loader /></Center>}>
+              <StudentsImportPage />
+            </Suspense>
+          }
+        />
         <Route path="/posts" element={<PostsListPage />} />
         <Route path="/posts/new" element={<PostEditPage />} />
         <Route path="/posts/:id/edit" element={<PostEditPage />} />

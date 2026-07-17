@@ -17,6 +17,9 @@ export interface StudentAccount {
   id: string
   username: string
   display_name: string | null
+  // Roster fields from a bulk Excel import (nullable for manually-created ones).
+  serial_number: string | null
+  request_code: string | null
   created_at: string
   last_sign_in_at: string | null
   disabled: boolean

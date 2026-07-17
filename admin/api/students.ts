@@ -82,6 +82,20 @@ function parseGroupIds(raw: unknown): string[] {
   return Array.from(new Set(ids))
 }
 
+// Optional free-form roster text (Excel import: serial number / request code).
+// Trimmed; an empty value becomes null so we never overwrite with blanks.
+function parseOptionalText(raw: unknown): string | null {
+  const value = String(raw ?? '').trim()
+  return value ? value : null
+}
+
+// Deduped, lowercased list of usernames to check for existence.
+function parseUsernameList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) throw new HttpError(400, 'قائمة أسماء المستخدمين غير صالحة')
+  const names = raw.map((v) => String(v ?? '').trim().toLowerCase()).filter(Boolean)
+  return Array.from(new Set(names))
+}
+
 // Replace a student's group memberships with exactly [groupIds] (empty clears them).
 async function replaceMemberships(
   admin: SupabaseClient,
@@ -106,7 +120,7 @@ async function listStudents(admin: SupabaseClient) {
   // profiles is the source of truth for who is a student and for display_name.
   const { data: profiles, error: profilesError } = await admin
     .from('profiles')
-    .select('id, role, display_name')
+    .select('id, role, display_name, serial_number, request_code')
   if (profilesError) throw new HttpError(500, profilesError.message)
   const byId = new Map(profiles.map((p) => [p.id, p]))
 
@@ -132,6 +146,8 @@ async function listStudents(admin: SupabaseClient) {
     id: string
     username: string
     display_name: string | null
+    serial_number: string | null
+    request_code: string | null
     created_at: string
     last_sign_in_at: string | null
     disabled: boolean
@@ -151,6 +167,8 @@ async function listStudents(admin: SupabaseClient) {
         display_name:
           profile.display_name ??
           ((user.user_metadata?.display_name as string | undefined) ?? null),
+        serial_number: (profile as { serial_number?: string | null }).serial_number ?? null,
+        request_code: (profile as { request_code?: string | null }).request_code ?? null,
         created_at: user.created_at,
         last_sign_in_at: user.last_sign_in_at ?? null,
         disabled: bannedUntil ? new Date(bannedUntil).getTime() > Date.now() : false,
@@ -185,7 +203,45 @@ async function createStudent(admin: SupabaseClient, body: Record<string, unknown
   // display_name pulled from user_metadata) synchronously, so the FK on
   // group_members is satisfiable by the time we assign groups.
   if (groupIds.length > 0) await replaceMemberships(admin, data.user.id, groupIds)
+
+  // Optional roster fields from an Excel import. Patch only what was supplied so
+  // a partial import never blanks an already-set column.
+  const patch: Record<string, string> = {}
+  const serialNumber = parseOptionalText(body.serial_number)
+  const requestCode = parseOptionalText(body.request_code)
+  if (serialNumber !== null) patch.serial_number = serialNumber
+  if (requestCode !== null) patch.request_code = requestCode
+  if (Object.keys(patch).length > 0) {
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update(patch)
+      .eq('id', data.user.id)
+    if (profileError) throw new HttpError(400, profileError.message)
+  }
   return { id: data.user.id, username }
+}
+
+// Bulk existence check for the Excel import: which of these usernames are already
+// taken? Read-only, so it only needs the admin gate the handler already applies.
+async function checkUsernames(admin: SupabaseClient, body: Record<string, unknown>) {
+  const requested = parseUsernameList(body.usernames)
+  if (requested.length === 0) return { existing: [] }
+
+  const taken = new Set<string>()
+  const perPage = 1000
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+    if (error) throw new HttpError(500, error.message)
+    for (const user of data.users) {
+      const uname = (user.user_metadata?.username as string | undefined)?.toLowerCase()
+      if (uname) taken.add(uname)
+      // Fallback to the synthetic email's local part in case metadata is missing.
+      const local = (user.email ?? '').split('@')[0]?.toLowerCase()
+      if (local) taken.add(local)
+    }
+    if (data.users.length < perPage) break
+  }
+  return { existing: requested.filter((u) => taken.has(u)) }
 }
 
 async function setGroups(admin: SupabaseClient, body: Record<string, unknown>) {
@@ -284,6 +340,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(await listStudents(admin))
       case 'create':
         return res.status(200).json(await createStudent(admin, body))
+      case 'check_usernames':
+        return res.status(200).json(await checkUsernames(admin, body))
       case 'reset_password':
         return res.status(200).json(await resetPassword(admin, body))
       case 'rename':
