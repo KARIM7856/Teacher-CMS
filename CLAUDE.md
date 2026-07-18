@@ -324,8 +324,36 @@ each phase.**
   + standalone function typecheck green; pure logic covered by an esbuild
   self-test (usernames, password format, phone-as-decimal, sheet parsing).
 
+### Phase 10 — Guest login (current)
+
+- **Goal:** a **"الدخول كضيف"** button on the app's sign-in screen that drops a
+  visitor straight into the app as a single shared **guest** student, seeing only
+  the content the teacher exposes to guests. No new auth mode — the guest is an
+  ordinary student whose one group grants a single **"guest" category**, so the
+  Phase 8 group-based RLS scopes everything automatically.
+- **App:** `auth_config.dart` gains `kGuestUsername` / `kGuestPassword` (build-time
+  `--dart-define`, like the Supabase keys) + an `isGuestLoginEnabled` guard.
+  `SignInScreen` shows an `OutlinedButton` (guarded by that flag) that calls the
+  existing `signIn(studentEmailForUsername(kGuestUsername), kGuestPassword)` and
+  lands in `HomeShell` via `RootScreen`'s auth-state routing — no nav code. The
+  button hides itself when the defines are unset. `dart_define.example.json`
+  documents the two new keys.
+- **Backend:** migration `…000800` provisions the guest **category** (slug
+  `guest`), the **"الضيوف" group**, and the category→group grant (idempotent).
+  Two manual follow-ups remain: author a published post under the guest category,
+  and create the guest **student account** (username=`GUEST_USERNAME`,
+  password=`GUEST_PASSWORD`) assigned to the الضيوف group — auth users must be
+  made via the admin portal, not raw SQL (login-500 on NULL token columns).
+- `flutter analyze` clean.
+
 ### Next up
 
+- **Apply migrations `…000600`, `…000700`, and `…000800` to the hosted DB and
+  redeploy the admin portal.** For guest login: after applying `…000800`, author a
+  published post under the **guest** category, create the guest student account
+  (username=`GUEST_USERNAME` / password=`GUEST_PASSWORD`) and assign it to the
+  **الضيوف** group, then build the app with the `GUEST_USERNAME` / `GUEST_PASSWORD`
+  dart-defines set.
 - **Apply migrations `…000600` and `…000700` to the hosted DB and redeploy the
   admin portal.** `000700` only adds two nullable `profiles` columns (safe,
   independent of `000600`). NOTE: once `000600` is applied, existing students see

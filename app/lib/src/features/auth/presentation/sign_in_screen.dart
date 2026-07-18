@@ -39,6 +39,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     if (ok && mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _signInAsGuest() async {
+    // Bypasses the form: signs in with the shared guest account so a visitor
+    // sees the "guest" category without needing credentials.
+    final bool ok = await ref.read(authControllerProvider.notifier).signIn(
+          email: studentEmailForUsername(kGuestUsername),
+          password: kGuestPassword,
+        );
+    if (ok && mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<void> state = ref.watch(authControllerProvider);
@@ -89,6 +99,29 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         )
                       : const Text('تسجيل الدخول'),
                 ),
+                if (isGuestLoginEnabled) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        child: Text(
+                          'أو',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton(
+                    onPressed: state.isLoading ? null : _signInAsGuest,
+                    child: const Text('الدخول كضيف'),
+                  ),
+                ],
               ],
             ),
           ),
