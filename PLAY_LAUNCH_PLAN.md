@@ -22,13 +22,60 @@ Legend: **[done]** already finished · **[you]** needs your accounts or a device
 | Listing copy in Arabic | **[done]** `store/google-play.md` |
 | Data safety / content rating answers | **[done]** worked out, ready to transcribe |
 | Legal documents written | **[done]** `admin/public/legal/` |
+| **Supabase backend** | **BLOCKER #0** — the project host does not resolve; nothing works until this is settled |
 | **Legal pages actually reachable** | **BLOCKER** — deployed build predates them |
 | **Hosted DB migrations** | **BLOCKER** — 000600/000700/000800 not applied |
 | Content + accounts to review against | **BLOCKER** — depends on the above |
 | Screenshots | not started — needs the app running against real content |
 | Play Console listing | not started |
 
-Three blockers, in a strict order: **legal pages → database → content → screenshots → console**.
+Blockers in a strict order: **backend → legal pages → database → content →
+screenshots → console**. Step 0 gates every one of them.
+
+---
+
+## Step 0 — The backend is unreachable · **[you]** · BLOCKS EVERYTHING
+
+`djtcqaqmonvajlzaeokw.supabase.co` **does not resolve**. Checked 4 Sep 2026:
+
+```
+nslookup djtcqaqmonvajlzaeokw.supabase.co  -> Non-existent domain
+curl https://…/rest/v1/                    -> HTTP 000 (no connection)
+nslookup supabase.co                       -> 76.76.21.21   (DNS is fine)
+curl https://status.supabase.com           -> HTTP 200      (Supabase is up)
+```
+
+Supabase gives each project its own DNS record — a random ref does not resolve
+either, so there is no wildcard and this absence is meaningful. A *paused* free
+project still resolves and answers with a "paused" response, so **NXDOMAIN points
+to the project being deleted or its ref having changed** — though only the
+dashboard can say which.
+
+This ref is baked into both clients: `app/dart_define.json`, and the deployed
+admin bundle (`/assets/index-XqYkmfSO.js` contains the same URL). So right now
+the admin portal cannot sign in and the app cannot load content.
+
+**What to do**
+
+1. Open the Supabase dashboard and establish whether the project is paused,
+   deleted, or now under a different ref.
+2. If it has to be recreated: run `supabase/_full_setup_hosted.sql` (migrations
+   000000–000400 plus the Arabic sample seed) on the empty project, then
+   `supabase/migrations/20250601000500_view_history_seen.sql`, then
+   [`supabase/_apply_pending_hosted.sql`](supabase/_apply_pending_hosted.sql) for
+   000600–000800. Recreate the admin user, then the students.
+3. Update the URL and anon key in **three** places: `app/dart_define.json`, the
+   admin portal Vercel env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`),
+   and the serverless function env vars (`SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY`).
+4. **Rebuild the AAB.** The artifact from step 5 has the dead host compiled into
+   it and would ship an app that can reach nothing.
+
+Verify recovery with:
+
+```bash
+node tools/verify_student_access.mjs <username> <password>
+```
 
 ---
 
@@ -194,7 +241,8 @@ the day the AAB is ready, and do the listing paperwork while it runs.
 
 | When | Do |
 | --- | --- |
-| Now | Step 7 (check the testing requirement) — it sets the whole timeline |
+| **First** | **Step 0 — find out what happened to the Supabase project.** Nothing else can proceed |
+| In parallel | Step 7 (check the testing requirement) — it sets the whole timeline and needs no backend |
 | Now | Step 1 (deploy legal pages) — 10 minutes, unblocks the console |
 | Next, quiet hours | Step 2 → Step 3 together, without a gap |
 | Then | Step 4 screenshots, Step 5 rebuild |
