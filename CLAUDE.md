@@ -415,13 +415,16 @@ each phase.**
   category, create the guest student account (username=`GUEST_USERNAME` /
   password=`GUEST_PASSWORD`) via the admin portal — never raw SQL — assign it to
   the **الضيوف** group, and build with those two dart-defines set.
-- **Publish to the stores.** Follow `/RELEASE.md` end to end; `/store` has the
-  listing copy and every console answer. The gating items are: redeploy the admin
-  portal so the `/legal/` URLs resolve, create the reviewer account described in
-  `store/review-notes.md`, capture screenshots, and back up
+- **Publish to Google Play first — iOS is postponed.** Follow `/RELEASE.md`;
+  `/store` has the listing copy and every console answer. Gating items for Play:
+  redeploy the admin portal so the `/legal/` URLs actually serve the documents
+  (they currently return 200 while serving the admin SPA — the deployed build
+  predates the legal pages), create the reviewer account from
+  `store/review-notes.md`, capture phone screenshots, and back up
   `keystores/teacher-cms-upload.jks` + `android/key.properties` off this machine.
-  For iOS, add the five signing/config secrets listed in RELEASE.md §5.5 and run
-  the **iOS release** workflow — no Mac needed except for screenshots.
+  A new personal Play account may also owe a 14-day / 12-tester closed test, so
+  start that early. The iOS side is fully prepared but untouched: its workflow is
+  manual-dispatch only so Android version tags cannot trigger it.
 - (Optional) friendlier app empty-state for a student with no group yet
   ("contact your teacher") — currently they just see an empty catalog. Worth doing
   before launch: it is the first thing a mis-assigned student sees.

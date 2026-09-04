@@ -4,6 +4,12 @@ Step-by-step for shipping `/app` to **Google Play** and the **Apple App Store**.
 Follow it in order the first time; §8 is the shorter path for every update after
 that.
 
+> **Current plan: Google Play first. iOS is postponed.** The Apple side is fully
+> prepared — bundle id, privacy manifest, icons, listing copy, and a CI workflow
+> that builds without a Mac — but nothing there is started, and no Apple account
+> is needed yet. Sections marked *(postponed)* can be skipped for now. The
+> **live path is §0 → §2 → §3 → §4 → §5.1-5.3 → §6**.
+
 Listing copy and every console answer live in [`/store`](store/). Read
 [`store/review-notes.md`](store/review-notes.md) before you submit — a missing
 reviewer account is the most common reason this kind of app gets rejected.
@@ -39,11 +45,11 @@ package path under `app/android/app/src/main/kotlin/`, and
 | | Cost | Notes |
 | --- | --- | --- |
 | Google Play Developer account | one-off $25 | Personal accounts opened since late 2023 must run a 14-day closed test with 12+ testers before production — start that early |
-| Apple Developer Program | $99/year | Individual is fine; a company listing needs a D-U-N-S number, which takes days |
-| A Mac with Xcode | — | **iOS cannot be built on Windows.** Without a Mac, use a cloud Mac CI (Codemagic, Bitrise) or borrow one |
+| Apple Developer Program | $99/year | *(postponed)* Not needed until the iOS launch. See §5.5 for the prerequisites when you get there |
 | Flutter SDK | — | Already at `C:\src\flutter` |
 
-Android builds work fine from this Windows machine.
+Android builds work fine from this Windows machine — no CI or extra hardware is
+needed for the Play release.
 
 ---
 
@@ -97,14 +103,22 @@ npm run build
 npx vercel deploy --prod --yes
 ```
 
-Then **open each URL in a browser** and confirm it renders (not the admin login
-page — `vercel.json` excludes `/legal/` from the SPA rewrite for exactly this
-reason):
+Then confirm each URL actually serves the document:
 
 - https://teacher-cms-admin.vercel.app/legal/privacy.html
 - https://teacher-cms-admin.vercel.app/legal/terms.html
 - https://teacher-cms-admin.vercel.app/legal/delete-account.html
 - https://teacher-cms-admin.vercel.app/legal/ (support page)
+
+**A `200` is not proof.** Before this deploy, all four returned `200` while
+serving the admin login SPA, because the old `vercel.json` rewrite swallowed
+`/legal/`. A reviewer following your privacy-policy link would have landed on a
+login screen — an instant rejection. Check the content, not the status code:
+
+```bash
+curl -s https://teacher-cms-admin.vercel.app/legal/privacy.html | grep -q "legal.css" \
+  && echo "policy is live" || echo "still serving the SPA — redeploy"
+```
 
 If you move the admin portal to a custom domain, update `legalBaseUrl` in
 `app/lib/src/core/config/app_info.dart` (or pass
@@ -160,7 +174,7 @@ If the build warns that `key.properties` was not found, it signed with the debug
 key and Play will refuse the upload — fix the path in `key.properties` and
 rebuild.
 
-### 5.4 iOS archive (on a Mac)
+### 5.4 iOS archive (on a Mac) *(postponed)*
 
 ```bash
 cd app
@@ -180,7 +194,7 @@ Store Connect**, or upload `build/ios/ipa/*.ipa` with Transporter.
 First time on the Mac, in Xcode → Runner → Signing & Capabilities: select your
 team and let Xcode create the `com.teachercms.student` App ID.
 
-### 5.5 Building iOS without a Mac — GitHub Actions
+### 5.5 Building iOS without a Mac — GitHub Actions *(postponed)*
 
 `flutter build ipa` only runs on macOS, and this project is developed on Windows.
 [`.github/workflows/ios-release.yml`](.github/workflows/ios-release.yml) builds
@@ -329,7 +343,7 @@ Review typically takes a few days for a first release, sometimes longer.
 
 ---
 
-## 7. App Store submission
+## 7. App Store submission *(postponed)*
 
 1. Developer portal → register the App ID `com.teachercms.student` (or let Xcode
    do it during signing).

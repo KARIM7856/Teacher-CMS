@@ -25,6 +25,14 @@
 
 name: iOS release
 
+# MANUAL ONLY, deliberately. iOS is postponed until after the Play Store launch,
+# and the Apple secrets below are not configured yet, so any automatic trigger
+# would only produce noise. A `push: tags: ['v*']` trigger in particular would
+# fire on the version tags cut for Android releases and fail every time.
+# Re-add one when the Apple side is actually live:
+#   push:
+#     tags:
+#       - 'v*'
 on:
   workflow_dispatch:
     inputs:
@@ -36,9 +44,6 @@ on:
         description: 'Build number (CFBundleVersion). Blank uses the run number.'
         type: string
         required: false
-  push:
-    tags:
-      - 'v*'
 
 # Cancel any earlier run of this workflow on the same ref when a new one starts:
 # a superseded run helps nobody, and on a private repo it is billed at 10x.
@@ -254,7 +259,7 @@ jobs:
           retention-days: 30
 
       - name: Upload to TestFlight
-        if: ${{ inputs.upload_to_testflight || github.event_name == 'push' }}
+        if: ${{ inputs.upload_to_testflight }}
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
