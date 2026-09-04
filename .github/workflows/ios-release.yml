@@ -40,8 +40,8 @@ on:
     tags:
       - 'v*'
 
-# A superseded run is wasted money on a 10x-billed runner, so cancel any earlier
-# run of this workflow on the same ref when a new one starts.
+# Cancel any earlier run of this workflow on the same ref when a new one starts:
+# a superseded run helps nobody, and on a private repo it is billed at 10x.
 concurrency:
   group: ios-release-${{ github.ref }}
   cancel-in-progress: true
@@ -50,8 +50,9 @@ env:
   FLUTTER_VERSION: '3.44.5'
 
 jobs:
-  # Gate the expensive job. macOS minutes bill at 10x on private repos, so the
-  # analyzer and tests — which do not need macOS — run on Linux first.
+  # Gate the slower job: the analyzer and tests do not need macOS, so they run on
+  # Linux first and a broken test never reaches the macOS runner (which is also
+  # billed at 10x should this repo ever become private).
   verify:
     name: Analyze and test
     runs-on: ubuntu-latest
@@ -80,9 +81,9 @@ jobs:
     name: Archive and export
     needs: verify
     runs-on: macos-latest
-    # A healthy run is 20-35 minutes. macOS bills at 10x on private repos, so a
-    # hung job left to a generous timeout would burn a large slice of a monthly
-    # allowance in one go — cap it just above the realistic worst case.
+    # A healthy run is 20-35 minutes. Capped just above the realistic worst case
+    # so a hung job cannot run for hours — which on a private repo, where macOS
+    # bills at 10x, would consume a large slice of a monthly allowance.
     timeout-minutes: 45
 
     steps:

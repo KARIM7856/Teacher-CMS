@@ -244,35 +244,29 @@ optional explicit build number.
 - The `.ipa` and the dSYMs are uploaded as workflow artifacts **before** the
   TestFlight step, so a failed upload never costs you the build: download the
   artifact and send it with Transporter instead.
-#### Cost, on a private repo
+#### Cost
 
-macOS minutes bill at **10×** on private repos (Linux 1×, Windows 2×), so the
-Free plan's 2,000 included minutes are really **200 minutes of macOS time**. A
-cold build here runs 20–35 minutes, i.e. 200–350 billed minutes — so expect
-roughly **8 builds a month** before the allowance is gone. Budget for that:
-first-time signing setup often takes several attempts, and a failed attempt costs
-the same as a successful one.
+**This repository is public, so GitHub-hosted runners are free** — macOS included,
+with no minute allowance to manage. Build as often as you need, which matters most
+during first-time signing setup, where several failed attempts are normal.
 
-You will not be billed by surprise. The Actions spending limit defaults to **$0**
-on Free and Pro, so workflows stop running when the allowance is exhausted rather
-than charging you. Raising it costs roughly $0.08/min for macOS (~$2 a build) —
-confirm the current rate at github.com/settings/billing, GitHub revises it.
+The workflow is still written to be frugal, because the picture changes entirely
+if the repo is ever made private:
 
-Three things in this workflow exist to protect that budget:
-
-- Analyzer and tests run on `ubuntu-latest` (1×) and gate the macOS job, so a
-  broken test never reaches a 10×-billed runner.
+- Analyzer and tests run on `ubuntu-latest` and gate the macOS job, so a broken
+  test never reaches the slower runner.
 - `timeout-minutes: 45` — just above the realistic worst case, so a hung job
-  cannot quietly eat a whole month's allowance.
+  cannot run for hours.
 - `concurrency: cancel-in-progress` — a superseded run is stopped rather than
   left to finish.
 
-On a **public** repo none of this is metered; standard runners are free. Before
-switching a repo to public for that reason, scan the whole history, not just the
-working tree — going public exposes every past commit. Nothing sensitive is
-tracked today (`key.properties`, `*.jks`, `.env`, `dart_define.json` are all
-gitignored and none are in the index), but that is a statement about the current
-tree, not about every commit ever made.
+**If this repo ever goes private**, macOS minutes bill at **10×** (Linux 1×,
+Windows 2×), so the Free plan's 2,000 included minutes become **200 minutes of
+macOS time**. A cold build here is 20–35 minutes, i.e. 200–350 billed minutes —
+roughly **8 builds a month**. You would not be billed by surprise: the Actions
+spending limit defaults to **$0** on Free and Pro, so workflows stop running
+rather than charging you. Raising it costs roughly $0.08/min for macOS (~$2 a
+build); confirm current rates at github.com/settings/billing.
 
 #### If the first run fails
 
