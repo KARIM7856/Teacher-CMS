@@ -17,7 +17,7 @@ Legend: **[done]** already finished · **[you]** needs your accounts or a device
 | | Status |
 | --- | --- |
 | Package name `com.teachercms.student` | **[done]** permanent, set on both platforms |
-| Signed release AAB builds | **[done]** verified end to end, correct package/icons/permissions |
+| **Upload-ready AAB built** | **[done]** 58.5 MB, release-signed, production Supabase credentials compiled into all 3 ABIs |
 | App icons, Play icon, feature graphic | **[done]** `store/assets/` |
 | Listing copy in Arabic | **[done]** `store/google-play.md` |
 | Data safety / content rating answers | **[done]** worked out, ready to transcribe |
@@ -124,19 +124,30 @@ it back to Claude once content exists and it can drive the emulator and capture.
 
 ---
 
-## Step 5 — Build the upload artifact · **[either]**
+## Step 5 — Build the upload artifact · **[done]**
 
-Already done once with production credentials:
+Built and verified at `app/build/app/outputs/bundle/release/app-release.aab`:
+
+| | |
+| --- | --- |
+| Size | 58.5 MB |
+| Package | `com.teachercms.student` |
+| Signing | release-signed (`META-INF` RSA block present) |
+| Credentials | production Supabase host compiled into all three ABIs |
+| Guest button | hidden — no guest defines, as intended for v1 |
+
+To rebuild after any change:
 
 ```bash
 cd app
 flutter build appbundle --release --dart-define-from-file=dart_define.json
-# -> app/build/app/outputs/bundle/release/app-release.aab
 ```
 
-Rebuild after any content or config change. Before uploading, confirm the build
-is release-signed — if Gradle warned that `key.properties` was missing, it used
-the debug key and Play will reject it.
+> A build with **empty** dart-defines is not a valid test of the real thing. It
+> comes out ~7 MB smaller because `SupabaseConfig.isConfigured` becomes a
+> compile-time `false`, letting Dart tree-shake the entire signed-in half of the
+> app. Always build with the defines file before uploading, and treat a
+> surprisingly small AAB as a symptom.
 
 Version for the first upload is `1.0.0+1` from `app/pubspec.yaml`. Every
 subsequent upload needs the number after `+` increased.
