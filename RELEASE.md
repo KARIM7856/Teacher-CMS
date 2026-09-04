@@ -199,17 +199,43 @@ Apple account.
 
 #### One-time setup (all of it from Windows)
 
-1. **Enrol in the Apple Developer Program** ($99/year) at developer.apple.com.
+1. **Enrol in the Apple Developer Program** — $99/year, at developer.apple.com.
+   This is the hard prerequisite: a free Apple ID gets you no App Store Connect
+   access at all, and therefore no API key. Also required:
+
+   - **Two-factor authentication** on the Apple ID.
+   - A decision between **Individual** and **Organization** enrolment.
+     Organization needs a D-U-N-S number (free, but obtaining and verifying one
+     can take days to weeks) and lets the app be sold under a company name.
+     Individual is immediate by comparison, but **your legal personal name is
+     shown publicly on the App Store listing** as the seller — worth deciding
+     deliberately rather than discovering after launch.
+   - Individual enrolment is often approved same-day; allow 24–48 hours.
+     Enrolling through the Apple Developer app on an iPhone/iPad can be faster,
+     because identity verification uses the device.
+
 2. **Register the App ID.** developer.apple.com → Certificates, Identifiers &
    Profiles → Identifiers → **+** → App IDs → App → explicit bundle ID
    `com.teachercms.student`.
 3. **Create the app record** in App Store Connect (My Apps → **+**). TestFlight
    uploads are rejected until the record exists.
 4. **Create an App Store Connect API key.** App Store Connect → Users and Access
-   → Integrations → App Store Connect API → **+**. Give it **App Manager** access
-   (Admin if provisioning still fails — a Developer-level key cannot create
-   certificates). Download the `AuthKey_XXXXXXXX.p8`: **Apple lets you download
-   it exactly once.** Note the Key ID and the Issuer ID shown on that page.
+   → **Integrations** → App Store Connect API → Team Keys → **+**.
+
+   - Creating a team key requires the **Account Holder** or **Admin** role. As a
+     solo developer you are the Account Holder, so this is automatic.
+   - Give the key **App Manager** access. A Developer-level key cannot create
+     signing certificates, which is the whole point of using it here.
+   - Download the `AuthKey_XXXXXXXX.p8`. **Apple lets you download it exactly
+     once** — if you lose it, revoke the key and generate a new one.
+   - Record the **Key ID** (10 characters, next to the key) and the **Issuer ID**
+     (a UUID shown at the top of the page — one per team, shared by all keys).
+
+   Treat the `.p8` as a high-value credential: at App Manager level it can manage
+   your apps, builds, and signing assets. Keep it in a password manager. `.gitignore`
+   now covers `*.p8`, `*.p12`, `*.cer` and `*.mobileprovision`, so it cannot be
+   committed by accident — but this repository is public, so don't rely on that
+   alone.
 5. **Find your Team ID** on developer.apple.com → Membership (10 characters).
 6. **Base64 the key** — in PowerShell:
 

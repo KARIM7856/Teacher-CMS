@@ -86,3 +86,13 @@ keystores/pass
 # Flutter app secrets (/app) — keep the *.example templates tracked
 # ─────────────────────────────────────────────────────────────
 app/dart_define.json
+
+# Apple signing credentials. The App Store Connect .p8 can manage the whole
+# developer account, so make it impossible to commit by accident — the repo is
+# public. These belong in a password manager and in GitHub Actions secrets.
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+AuthKey_*
