@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (API 31) backup/transfer rules. Paired with
+     android:allowBackup="false", which covers older releases.
+
+     The app stores an authenticated Supabase session locally; copying it to
+     another device via cloud backup or device-to-device transfer would hand
+     someone a signed-in student account. Nothing here is worth restoring —
+     all content lives on the server — so exclude everything. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

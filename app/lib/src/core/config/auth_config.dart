@@ -13,6 +13,17 @@ const String kStudentEmailDomain = 'students.teachercms.app';
 String studentEmailForUsername(String username) =>
     '${username.trim().toLowerCase()}@$kStudentEmailDomain';
 
+/// The inverse: the username behind a synthetic login address, or null if
+/// [email] is absent or isn't one of ours. Used wherever the UI would otherwise
+/// show the synthetic address, which is not a mailbox and only confuses.
+String? usernameFromStudentEmail(String? email) {
+  if (email == null || email.isEmpty) return null;
+  const String suffix = '@$kStudentEmailDomain';
+  if (!email.toLowerCase().endsWith(suffix)) return null;
+  final String username = email.substring(0, email.length - suffix.length);
+  return username.isEmpty ? null : username;
+}
+
 /// Credentials for the shared "guest" student account, injected at build time
 /// via `--dart-define` (like the Supabase keys). The guest is an ordinary
 /// student whose single group grants only the "guest" category, so tapping

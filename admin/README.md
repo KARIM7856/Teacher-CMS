@@ -36,6 +36,27 @@ content for students.
   `media` bucket, mark each file video/pdf/other, drag-reorder).
 - **Playlists** — create/edit, add posts in order via **drag-and-drop**, published toggle.
 
+## Public legal pages
+
+`public/legal/` holds the store-facing documents, served as plain static files
+alongside the SPA:
+
+| Path | Purpose |
+| ---- | ------- |
+| `/legal/` | Support page (Apple requires a support URL) |
+| `/legal/privacy.html` | Privacy policy (both stores require it) |
+| `/legal/terms.html` | Terms of use |
+| `/legal/delete-account.html` | Account/data deletion (Google Play requires this URL) |
+
+Each page is Arabic first with an English translation below it. They sit
+deliberately **outside** the React bundle, so a broken build can never take the
+privacy policy offline — which would be a store policy violation. `vercel.json`
+excludes `/legal/` from the SPA rewrite for the same reason; leave that exclusion
+in place. Contact details and the last-updated date are edited in the HTML.
+
+See [`/RELEASE.md`](../RELEASE.md) and [`/store`](../store) for how these URLs are
+used in the two store consoles.
+
 ## Language & direction
 
 **Arabic-first and RTL by default** (`<html lang="ar" dir="rtl">`, Mantine

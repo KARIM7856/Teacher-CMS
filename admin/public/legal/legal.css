@@ -1,0 +1,203 @@
+/* Shared styling for the public legal pages (privacy, terms, account deletion).
+   Deliberately standalone: these pages are served as plain static files, outside
+   the React admin bundle, so they stay reachable even if the SPA fails to build
+   or a store reviewer opens them with JavaScript disabled.
+
+   Arabic-first — each page sets dir="rtl" on <html>; the English sections opt
+   back out with dir="ltr" on their own container. All spacing uses logical
+   properties so nothing has to be mirrored by hand. */
+
+:root {
+  --ink: #2b2118;
+  --muted: #6b5c50;
+  --brand: #e4551f;
+  --brand-soft: #fff3ec;
+  --surface: #fffbf6;
+  --card: #ffffff;
+  --line: #efe2d8;
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: "Cairo", "Segoe UI", "Noto Sans Arabic", system-ui, -apple-system, sans-serif;
+  font-size: 17px;
+  line-height: 1.85;
+}
+
+header.masthead {
+  background: linear-gradient(160deg, #ffa06b, #e4551f);
+  color: #fff;
+  padding: 40px 24px 34px;
+}
+
+header.masthead .inner {
+  max-width: 780px;
+  margin-inline: auto;
+}
+
+header.masthead .eyebrow {
+  margin: 0 0 6px;
+  font-size: 15px;
+  opacity: 0.9;
+}
+
+header.masthead h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+header.masthead .updated {
+  margin: 10px 0 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+main {
+  max-width: 780px;
+  margin-inline: auto;
+  padding: 28px 24px 72px;
+}
+
+section.doc {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px 26px;
+  margin-block-end: 26px;
+}
+
+section.doc[dir="ltr"] {
+  text-align: start;
+}
+
+h2 {
+  font-size: 21px;
+  margin: 30px 0 10px;
+  color: var(--brand);
+  line-height: 1.5;
+}
+
+h2:first-of-type {
+  margin-block-start: 0;
+}
+
+h3 {
+  font-size: 17px;
+  margin: 20px 0 6px;
+}
+
+p {
+  margin: 0 0 12px;
+}
+
+ul {
+  margin: 0 0 14px;
+  padding-inline-start: 22px;
+}
+
+li {
+  margin-block-end: 7px;
+}
+
+a {
+  color: var(--brand);
+}
+
+strong {
+  font-weight: 700;
+}
+
+/* Key facts callout — used for "we never do X" style statements that a reader
+   (or a store reviewer) should be able to find without reading the whole page. */
+.callout {
+  background: var(--brand-soft);
+  border: 1px solid #f6d3c0;
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin: 0 0 18px;
+}
+
+.callout p:last-child,
+.callout ul:last-child {
+  margin-block-end: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 16px;
+  font-size: 15.5px;
+}
+
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  text-align: start;
+  vertical-align: top;
+}
+
+th {
+  background: #faf3ee;
+  font-weight: 700;
+}
+
+.lang-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.lang-divider::before,
+.lang-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+footer.page-footer {
+  max-width: 780px;
+  margin-inline: auto;
+  padding: 0 24px 56px;
+  color: var(--muted);
+  font-size: 14.5px;
+}
+
+footer.page-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-block-end: 12px;
+}
+
+@media (max-width: 560px) {
+  body {
+    font-size: 16px;
+  }
+
+  header.masthead h1 {
+    font-size: 24px;
+  }
+
+  section.doc {
+    padding: 20px 18px;
+  }
+}

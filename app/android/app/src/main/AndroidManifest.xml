@@ -1,10 +1,29 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Streaming video, fetching PDFs, and reaching Supabase all need network. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Store-readiness attributes on <application> below, in order:
+         • supportsRtl   — the whole UI is right-to-left. This mirrors platform
+           surfaces too (the WebView used for Drive/YouTube, PDF rendering, system
+           dialogs), not just the Flutter layer, which sets its own direction.
+         • usesCleartextTraffic="false" — everything the app talks to is HTTPS
+           (Supabase, storage, embeds). Stating it explicitly means an accidental
+           http:// media link fails loudly instead of quietly sending a student's
+           traffic unencrypted.
+         • allowBackup="false" + dataExtractionRules — the Supabase session token
+           lives in shared_preferences; Android Auto Backup and device-to-device
+           transfer would copy a signed-in session onto another device. Opt out of
+           both (allowBackup covers pre-12, the xml rules cover Android 12+).
+           Nothing local is worth restoring — all content is server-side. -->
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -47,6 +66,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
+        </intent>
+        <!-- ...and a mail client, for the account-deletion request link. -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
         </intent>
     </queries>
 </manifest>

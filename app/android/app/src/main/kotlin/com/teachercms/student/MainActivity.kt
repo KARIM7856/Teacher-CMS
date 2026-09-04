@@ -1,4 +1,4 @@
-package com.teachercms.teacher_cms_app
+package com.teachercms.student
 
 import io.flutter.embedding.android.FlutterActivity
 

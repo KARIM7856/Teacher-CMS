@@ -2,5 +2,6 @@
   "SUPABASE_URL": "https://your-project-ref.supabase.co",
   "SUPABASE_ANON_KEY": "your-anon-public-key",
   "GUEST_USERNAME": "guest",
-  "GUEST_PASSWORD": ""
+  "GUEST_PASSWORD": "",
+  "LEGAL_BASE_URL": "https://teacher-cms-admin.vercel.app/legal"
 }

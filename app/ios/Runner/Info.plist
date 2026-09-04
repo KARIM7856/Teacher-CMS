@@ -4,18 +4,27 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- Arabic is the app's native language, not a translation of an English
+	     original. Hardcoded rather than $(DEVELOPMENT_LANGUAGE) so the App Store
+	     and iOS both report the app as Arabic. -->
 	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<string>ar</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ar</string>
+	</array>
+	<!-- Shown under the icon on the Home screen and in system dialogs. -->
 	<key>CFBundleDisplayName</key>
-	<string>Teacher Cms App</string>
+	<string>منصة المعلّم</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<!-- Short ASCII bundle name; the user-facing name is CFBundleDisplayName. -->
 	<key>CFBundleName</key>
-	<string>teacher_cms_app</string>
+	<string>TeacherCMS</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -24,8 +33,21 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- Export compliance: the app uses only HTTPS/TLS provided by the OS, which
+	     is exempt. Declaring it here stops App Store Connect asking on every
+	     single upload. Revisit if custom crypto is ever added. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- url_launcher calls canLaunchUrl before opening links and the account
+	     deletion request; iOS only answers for schemes declared here. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>mailto</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

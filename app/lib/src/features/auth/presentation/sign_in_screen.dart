@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_info.dart';
 import '../../../core/config/auth_config.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/external_link.dart';
 import '../application/auth_providers.dart';
 import 'auth_error_message.dart';
 
@@ -122,11 +124,63 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     child: const Text('الدخول كضيف'),
                   ),
                 ],
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'لا يمكن إنشاء حساب من داخل التطبيق — معلّمك هو من ينشئ '
+                  'الحسابات ويسلّمك اسم المستخدم وكلمة المرور.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                const _LegalFooter(),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Links to the published privacy policy and terms. Both stores expect these to
+/// be reachable before a user signs in, not only from inside the account screen.
+class _LegalFooter extends StatelessWidget {
+  const _LegalFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final TextStyle? style = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.sm,
+      children: [
+        Text('بالدخول فإنك توافق على', style: style),
+        TextButton(
+          onPressed: () => openExternalUrl(context, AppInfo.termsUrl),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(0, 32),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('شروط الاستخدام'),
+        ),
+        Text('و', style: style),
+        TextButton(
+          onPressed: () => openExternalUrl(context, AppInfo.privacyPolicyUrl),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(0, 32),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('سياسة الخصوصية'),
+        ),
+      ],
     );
   }
 }

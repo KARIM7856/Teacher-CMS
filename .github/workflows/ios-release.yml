@@ -1,0 +1,273 @@
+# Builds a signed iOS archive on a GitHub-hosted macOS runner and optionally
+# ships it to TestFlight. Written because the app is developed on Windows, where
+# `flutter build ipa` cannot run at all.
+#
+# Signing needs no .p12 and no Mac. An App Store Connect API key (.p8) is enough:
+# xcodebuild's `-allowProvisioningUpdates` creates and reuses the distribution
+# certificate and provisioning profile in your Apple account on the runner.
+#
+# Why this drives xcodebuild instead of just calling `flutter build ipa`:
+# Flutter does pass `-allowProvisioningUpdates`, but it does NOT pass the
+# `-authenticationKey*` flags, and a fresh runner has no Apple ID signed into
+# Xcode — so automatic provisioning has nothing to authenticate with and fails.
+# Passing the key ourselves is the whole difference. `flutter build ios` still
+# does the Dart/plugin compilation; only archive and export are done by hand.
+#
+# Required repository secrets — see /RELEASE.md §5.5 for how to obtain each:
+#   APP_STORE_CONNECT_KEY_ID          the key's ID, e.g. 2X9R4HXF34
+#   APP_STORE_CONNECT_ISSUER_ID       the issuer UUID from App Store Connect
+#   APP_STORE_CONNECT_PRIVATE_KEY     base64 of the downloaded AuthKey_*.p8
+#   APPLE_TEAM_ID                     10-character team ID
+#   SUPABASE_URL, SUPABASE_ANON_KEY   production backend credentials
+# Optional:
+#   GUEST_USERNAME, GUEST_PASSWORD    omit to ship without the guest button
+#   LEGAL_BASE_URL                    defaults to the value in app_info.dart
+
+name: iOS release
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: 'Upload the build to TestFlight when it succeeds'
+        type: boolean
+        default: true
+      build_number:
+        description: 'Build number (CFBundleVersion). Blank uses the run number.'
+        type: string
+        required: false
+  push:
+    tags:
+      - 'v*'
+
+# A superseded run is wasted money on a 10x-billed runner, so cancel any earlier
+# run of this workflow on the same ref when a new one starts.
+concurrency:
+  group: ios-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.44.5'
+
+jobs:
+  # Gate the expensive job. macOS minutes bill at 10x on private repos, so the
+  # analyzer and tests — which do not need macOS — run on Linux first.
+  verify:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+  build:
+    name: Archive and export
+    needs: verify
+    runs-on: macos-latest
+    # A healthy run is 20-35 minutes. macOS bills at 10x on private repos, so a
+    # hung job left to a generous timeout would burn a large slice of a monthly
+    # allowance in one go — cap it just above the realistic worst case.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Report toolchain
+        run: |
+          xcodebuild -version
+          flutter --version
+
+      # altool discovers a key placed here automatically, and xcodebuild is given
+      # the path explicitly below — one file serves both.
+      - name: Install the App Store Connect API key
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEY_ID" ] || [ -z "$KEY_BASE64" ]; then
+            echo "::error::APP_STORE_CONNECT_KEY_ID and APP_STORE_CONNECT_PRIVATE_KEY must be set."
+            exit 1
+          fi
+          mkdir -p ~/private_keys
+          echo "$KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${KEY_ID}.p8
+          chmod 600 ~/private_keys/AuthKey_${KEY_ID}.p8
+          echo "ASC_KEY_PATH=$HOME/private_keys/AuthKey_${KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      # Compiles the Dart AOT snapshot and writes the dart-defines plus the build
+      # number into ios/Flutter/Generated.xcconfig, which the Xcode build phase
+      # reads. Unsigned on purpose — signing happens at archive time.
+      - name: Build the Flutter iOS bundle
+        working-directory: app
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GUEST_USERNAME: ${{ secrets.GUEST_USERNAME }}
+          GUEST_PASSWORD: ${{ secrets.GUEST_PASSWORD }}
+          LEGAL_BASE_URL: ${{ secrets.LEGAL_BASE_URL }}
+          INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY must be set, or the app ships unconfigured."
+            exit 1
+          fi
+
+          # Every TestFlight upload needs a build number no earlier upload used.
+          BUILD_NUMBER="${INPUT_BUILD_NUMBER:-${GITHUB_RUN_NUMBER}}"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "Building with build number $BUILD_NUMBER"
+
+          # Optional defines are omitted entirely when their secret is unset, so
+          # an absent guest password hides the guest button rather than shipping
+          # an empty one. Written as `if` blocks rather than `[ -n x ] && …`
+          # because under `set -e` a false test on the last such line would abort
+          # the step.
+          ARGS=(--release --no-codesign --build-number="$BUILD_NUMBER")
+          ARGS+=(--dart-define=SUPABASE_URL="$SUPABASE_URL")
+          ARGS+=(--dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
+          if [ -n "$GUEST_USERNAME" ]; then
+            ARGS+=(--dart-define=GUEST_USERNAME="$GUEST_USERNAME")
+          fi
+          if [ -n "$GUEST_PASSWORD" ]; then
+            ARGS+=(--dart-define=GUEST_PASSWORD="$GUEST_PASSWORD")
+          fi
+          if [ -n "$LEGAL_BASE_URL" ]; then
+            ARGS+=(--dart-define=LEGAL_BASE_URL="$LEGAL_BASE_URL")
+          fi
+
+          flutter build ios "${ARGS[@]}"
+
+      - name: Archive
+        working-directory: app/ios
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TEAM_ID" ]; then
+            echo "::error::APPLE_TEAM_ID must be set."
+            exit 1
+          fi
+          xcodebuild archive \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic
+
+      - name: Write export options
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          # Xcode 15.3 renamed the App Store export method; the old spelling is
+          # deprecated but still accepted, so pick by the runner's Xcode version
+          # rather than assuming either.
+          XCODE_MAJOR=$(xcodebuild -version | head -1 | awk '{print $2}' | cut -d. -f1)
+          if [ "$XCODE_MAJOR" -ge 16 ]; then
+            METHOD="app-store-connect"
+          else
+            METHOD="app-store"
+          fi
+          echo "Export method: $METHOD (Xcode major $XCODE_MAJOR)"
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>${METHOD}</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Export the IPA
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
+          ls -lh "$RUNNER_TEMP/ipa"
+
+      # Kept even when the TestFlight upload is skipped or fails, so the build is
+      # never lost — you can always upload it by hand with Transporter.
+      - name: Upload the IPA as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa-build-${{ env.BUILD_NUMBER }}
+          path: ${{ runner.temp }}/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload the dSYMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsyms-build-${{ env.BUILD_NUMBER }}
+          path: ${{ runner.temp }}/Runner.xcarchive/dSYMs
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload to TestFlight
+        if: ${{ inputs.upload_to_testflight || github.event_name == 'push' }}
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          IPA=$(find "$RUNNER_TEMP/ipa" -name '*.ipa' | head -1)
+          echo "Uploading $IPA"
+          # altool finds the key in ~/private_keys by its ID.
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA" \
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER_ID"
+
+      - name: Clean up the API key
+        if: always()
+        run: rm -rf ~/private_keys

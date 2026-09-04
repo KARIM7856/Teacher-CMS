@@ -6,18 +6,26 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Release signing credentials live in android/key.properties (gitignored).
-// Absent on machines that only build debug (e.g. CI without secrets) — the
-// release signingConfig below simply stays unconfigured in that case.
+// Release signing credentials live in android/key.properties (gitignored) and
+// point at keystores/teacher-cms-upload.jks. Absent on machines that only build
+// debug (e.g. CI without secrets), in which case the release build falls back to
+// debug signing rather than failing — a debug-signed artifact is obviously not
+// uploadable to Play, which is the point.
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
+val hasReleaseSigning = keystorePropertiesFile.exists()
+if (hasReleaseSigning) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 android {
-    namespace = "com.teachercms.teacher_cms_app"
-    compileSdk = flutter.compileSdkVersion
+    namespace = "com.teachercms.student"
+
+    // Pinned rather than inherited from `flutter.*` so a Flutter SDK upgrade can
+    // never silently move the SDK levels an already-published build was tested
+    // against. Google Play requires new releases to target a recent API level —
+    // re-check the current floor before each submission and bump targetSdk here.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -26,28 +34,46 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.teachercms.teacher_cms_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // PERMANENT: the Play Store identity of this app. It can never be changed
+        // after the first upload — a new value would be a different app listing.
+        applicationId = "com.teachercms.student"
+        minSdk = 24
+        targetSdk = 36
+        // Both come from pubspec.yaml's `version: <name>+<code>`; bump it there.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
+        if (hasReleaseSigning) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String?
+                keyPassword = keystoreProperties["keyPassword"] as String?
+                storeFile = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
+                storePassword = keystoreProperties["storePassword"] as String?
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn("android/key.properties not found — signing release with the DEBUG key. This artifact cannot be uploaded to Google Play.")
+                signingConfigs.getByName("debug")
+            }
+            // Code shrinking (R8) and resource shrinking are both switched on by
+            // the Flutter Gradle plugin for release builds — do not set them here.
+        }
+    }
+
+    // Play delivers only the device's language when language splits are on. This
+    // app is Arabic regardless of the device language, so keep every localized
+    // resource in the base artifact rather than letting Play strip them.
+    bundle {
+        language {
+            enableSplit = false
         }
     }
 }

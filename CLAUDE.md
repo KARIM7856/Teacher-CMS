@@ -39,11 +39,11 @@ Applies everywhere:
   right-to-left.
 - **Bundle an Arabic font** with strong legibility for long-form reading
   (e.g. Cairo, Tajawal, IBM Plex Sans Arabic, or a Naskh face). Don't depend on
-  system fonts. *(Exact face: to confirm.)*
+  system fonts. **Settled: Cairo**, bundled in `app/assets/fonts`.
 - **Mixed Arabic/Latin text** (an English term in an Arabic sentence, a URL, a
   filename) must use proper bidirectional isolation so it doesn't reorder.
 - **Numerals:** pick one and apply consistently — Western (`0-9`) or
-  Arabic-Indic (`٠-٩`). *(Default assumption: Western digits; to confirm.)*
+  Arabic-Indic (`٠-٩`). **Settled: Western `0-9`** everywhere, app UI and legal pages alike.
 - **Don't hardcode user-facing strings.** Route all copy through localization
   from day one. Arabic is first; externalized strings leave room to add another
   language later without rework.
@@ -324,7 +324,7 @@ each phase.**
   + standalone function typecheck green; pure logic covered by an esbuild
   self-test (usernames, password format, phone-as-decimal, sheet parsing).
 
-### Phase 10 — Guest login (current)
+### Phase 10 — Guest login
 
 - **Goal:** a **"الدخول كضيف"** button on the app's sign-in screen that drops a
   visitor straight into the app as a single shared **guest** student, seeing only
@@ -346,27 +346,86 @@ each phase.**
   made via the admin portal, not raw SQL (login-500 on NULL token columns).
 - `flutter analyze` clean.
 
+### Phase 11 — Store readiness (App Store + Google Play) (current)
+
+- **Permanent identity set:** `com.teachercms.student` as both the Android
+  `applicationId`/namespace and the iOS bundle id (iOS was previously the
+  mismatched `com.teachercms.teacherCmsApp`); Kotlin package moved to match.
+  Display name «منصة المعلّم» on both platforms. **These can never change once
+  either store accepts an upload.**
+- **Android:** SDK levels pinned explicitly (compile/target 36, min 24) instead
+  of tracking `flutter.*`; release falls back to debug signing with a loud
+  warning when `key.properties` is absent rather than failing; language splits
+  disabled so Arabic resources always ship; manifest gains `supportsRtl`,
+  `usesCleartextTraffic="false"`, and `allowBackup="false"` +
+  `xml/data_extraction_rules` (the Supabase session must not ride a cloud backup
+  or device transfer onto another device); `mailto` added to `<queries>`.
+- **iOS:** `CFBundleDisplayName` set to the Arabic name, development region `ar`,
+  `ITSAppUsesNonExemptEncryption=false` (stops the export-compliance prompt on
+  every upload), `LSApplicationQueriesSchemes`, and a new
+  **`PrivacyInfo.xcprivacy`** — Apple's required privacy manifest, registered by
+  hand in `project.pbxproj` (file ref, group, and Copy Bundle Resources).
+- **Icons:** the Flutter placeholder is gone. `tools/generate_app_icons.mjs`
+  (dependency-free PNG encoder in Node) renders one design — a white open book on
+  a warm orange gradient with a teal sparkle — into every Android mipmap
+  (legacy, round, adaptive fg/bg, Android 13 monochrome), the whole iOS
+  `AppIcon.appiconset` (alpha stripped; an alpha channel fails App Store
+  validation), and the Play/App Store listing assets. Re-runnable, so a colour
+  change propagates everywhere.
+- **Legal:** Arabic-first (English below) privacy policy, terms of use,
+  account/data-deletion page, and a support page, served as **static files** from
+  `admin/public/legal/` — outside the React bundle, with `vercel.json` excluding
+  `/legal/` from the SPA rewrite, so a broken build can never take the privacy
+  policy offline. Terms carry Apple's required EULA minimum clauses.
+- **In-app:** Profile now links to privacy/terms/support and a new
+  `AccountDeletionScreen` (both stores expect a deletion route reachable from
+  inside the app; it opens a pre-filled request mail), shows the **username**
+  instead of the confusing synthetic email, and prints the version. Sign-in gains
+  a legal footer and a line explaining that accounts come from the teacher.
+  Shared `openExternalUrl` helper replaces the duplicated launcher logic.
+- **Docs:** `/RELEASE.md` is the end-to-end runbook (identity, key backup,
+  backend prep, builds, both console walkthroughs, update procedure,
+  pre-submission checklist); `/store` holds listing copy in Arabic plus every
+  console answer — Play Data safety, Apple nutrition labels, age rating,
+  reviewer account and notes, screenshot specs.
+- **iOS CI:** `.github/workflows/ios-release.yml` archives and signs on a
+  GitHub `macos-latest` runner — iOS cannot be built on the Windows dev machine.
+  Signing needs only an App Store Connect API key (no `.p12`, no Mac): the
+  workflow drives `xcodebuild` itself so it can pass `-authenticationKey*`,
+  which `flutter build ipa` does not, leaving `-allowProvisioningUpdates` unable
+  to authenticate on a runner with no signed-in Apple ID. Analyzer and tests run
+  on `ubuntu-latest` first, since macOS minutes bill at 10x on private repos.
+  Note this project uses Flutter's **Swift Package Manager** integration for iOS
+  plugins — there is no Podfile, so no `pod install` step.
+- Decisions: audience **13+** (so no Play Families Policy / COPPA sections),
+  contact `k.massoud703@gmail.com`, legal pages hosted on the existing Vercel
+  admin deployment.
+- `flutter analyze` clean; tests pass (a new `auth_config_test.dart` covers the
+  username ⇄ synthetic-email mapping); admin `tsc` + `vite build` green and the
+  legal pages verified rendering RTL in a headless browser.
+
 ### Next up
 
-- **Apply migrations `…000600`, `…000700`, and `…000800` to the hosted DB and
-  redeploy the admin portal.** For guest login: after applying `…000800`, author a
-  published post under the **guest** category, create the guest student account
-  (username=`GUEST_USERNAME` / password=`GUEST_PASSWORD`) and assign it to the
-  **الضيوف** group, then build the app with the `GUEST_USERNAME` / `GUEST_PASSWORD`
-  dart-defines set.
-- **Apply migrations `…000600` and `…000700` to the hosted DB and redeploy the
-  admin portal.** `000700` only adds two nullable `profiles` columns (safe,
-  independent of `000600`). NOTE: once `000600` is applied, existing students see
-  nothing until assigned to a group — so create groups **before** importing, and
-  do assignments promptly. The import matches sheet→group by name, so the groups
-  must exist first.
+- **Apply migrations `…000600`, `…000700`, `…000800` to the hosted DB.** Order
+  matters. `000700` only adds two nullable `profiles` columns (safe,
+  independent). NOTE: the moment `000600` lands, every student sees nothing
+  until assigned to a group — so create groups first, then assign promptly. The
+  Excel import matches sheet→group by name, so groups must exist before it runs.
+- **Guest login (after `000800`):** author a published post under the **guest**
+  category, create the guest student account (username=`GUEST_USERNAME` /
+  password=`GUEST_PASSWORD`) via the admin portal — never raw SQL — assign it to
+  the **الضيوف** group, and build with those two dart-defines set.
+- **Publish to the stores.** Follow `/RELEASE.md` end to end; `/store` has the
+  listing copy and every console answer. The gating items are: redeploy the admin
+  portal so the `/legal/` URLs resolve, create the reviewer account described in
+  `store/review-notes.md`, capture screenshots, and back up
+  `keystores/teacher-cms-upload.jks` + `android/key.properties` off this machine.
+  For iOS, add the five signing/config secrets listed in RELEASE.md §5.5 and run
+  the **iOS release** workflow — no Mac needed except for screenshots.
 - (Optional) friendlier app empty-state for a student with no group yet
-  ("contact your teacher") — currently they just see an empty catalog.
-
-- Deploy the admin portal to Vercel (set the four env vars) and flip off public
-  sign-ups; then create the first students and verify app login end-to-end.
-- Initialize the Supabase CLI project / link to a hosted project.
-- Confirm Arabic specifics: font face, numeral style (Western `0-9` vs
-  Arabic-Indic `٠-٩`), and whether a second language is ever in scope.
-- Run the full app on a device/emulator and wire it to a hosted Supabase
-  project (only `flutter analyze` + tests run in this container).
+  ("contact your teacher") — currently they just see an empty catalog. Worth doing
+  before launch: it is the first thing a mis-assigned student sees.
+- Initialize the Supabase CLI project / link to the hosted project (migrations
+  are currently applied by hand through the SQL editor).
+- Run the full app on a device wired to the hosted Supabase project — only
+  `flutter analyze` + tests have run here.
