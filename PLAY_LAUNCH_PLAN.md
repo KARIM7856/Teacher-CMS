@@ -29,8 +29,13 @@ Legend: **[done]** already finished · **[you]** needs your accounts or a device
 | Screenshots | not started — needs the app running against real content |
 | Play Console listing | not started |
 
-Blockers in a strict order: **backend → legal pages → database → content →
-screenshots → console**. Step 0 gates every one of them.
+Blockers in a strict order: **backend → database → content → screenshots →
+console**.
+
+**Step 1 is the exception — it is not blocked by Step 0.** The legal pages are
+static HTML that never touches Supabase, so they can be deployed today, and Play
+needs those URLs whatever state the database is in. Do it while the backend
+question is being sorted out.
 
 ---
 
@@ -86,14 +91,27 @@ Play requires a privacy-policy URL *and* a data-deletion URL. Right now all four
 live deployment predates the legal files and the old rewrite swallowed the path.
 A reviewer clicking your policy link would land on a login screen.
 
-The fix is committed; it only needs deploying. The Vercel CLI token on this
-machine has expired, so this one is yours:
+**This does not depend on Step 0.** These are static files; they never talk to
+Supabase, so the dead backend is irrelevant here. Deploy them now.
+
+The fix is committed and only needs deploying. There is no usable Vercel
+credential on this machine — no token in the environment, no CLI `auth.json`, and
+`admin/.env.local` holds only a `VERCEL_OIDC_TOKEN` that expired 2026-07-09 (and
+which could not deploy anyway; it is a workload-identity token for the deployed
+function to authenticate *outward*). So authenticate first:
 
 ```bash
 cd admin
-npx vercel login          # token expired — re-authenticate first
+npx vercel login          # interactive browser flow
 npm run build
 npx vercel deploy --prod --yes
+```
+
+Or, to let this be automated, create a token at vercel.com/account/tokens scoped
+to the `students-cms` team and pass it explicitly:
+
+```bash
+npx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
 ```
 
 Then verify by **content, not status code**:
@@ -241,8 +259,9 @@ the day the AAB is ready, and do the listing paperwork while it runs.
 
 | When | Do |
 | --- | --- |
-| **First** | **Step 0 — find out what happened to the Supabase project.** Nothing else can proceed |
-| In parallel | Step 7 (check the testing requirement) — it sets the whole timeline and needs no backend |
+| **First** | **Step 0 — find out what happened to the Supabase project.** Steps 2–6 all wait on it |
+| Today, in parallel | Step 1 (deploy the legal pages) — static, unaffected by the backend |
+| Today, in parallel | Step 7 (check the testing requirement) — needs no backend, and sets the whole timeline |
 | Now | Step 1 (deploy legal pages) — 10 minutes, unblocks the console |
 | Next, quiet hours | Step 2 → Step 3 together, without a gap |
 | Then | Step 4 screenshots, Step 5 rebuild |
