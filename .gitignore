@@ -96,3 +96,11 @@ app/dart_define.json
 *.certSigningRequest
 *.mobileprovision
 AuthKey_*
+
+# Supabase/Vercel credential dumps. The integration exports every key —
+# service_role and the DB password included — into one plain-text file. This
+# repo is public, so make committing one impossible. Keep them in a password
+# manager; only *.example files belong in git.
+*credentials*.txt
+*credentials*.json
+supabase/supabase_credentials.txt
