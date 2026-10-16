@@ -288,7 +288,7 @@ each phase.**
   on create, and a per-student "assign groups" dialog. New `src/api/groups.ts`;
   `groups`/grant tables are admin-managed directly via RLS (like categories).
 - Admin `tsc --noEmit` + `vite build` green; serverless function typechecks
-  standalone. **Pending:** apply `…000600` to the hosted DB and redeploy admin
+  standalone. **Applied to the hosted DB 2026-10-16**; redeploy admin still pending
   (see *Next up*) — applying it flips every student to group-based visibility,
   so groups must be created/assigned right after.
 
@@ -406,12 +406,17 @@ each phase.**
 
 ### Next up
 
-- **Apply migrations `…000600`, `…000700`, `…000800` to the hosted DB.** Order
-  matters. `000700` only adds two nullable `profiles` columns (safe,
-  independent). NOTE: the moment `000600` lands, every student sees nothing
-  until assigned to a group — so create groups first, then assign promptly. The
-  Excel import matches sheet→group by name, so groups must exist before it runs.
-- **Guest login (after `000800`):** author a published post under the **guest**
+- ⚠ **URGENT — every student currently sees an empty app.** Migrations
+  `…000600`, `…000700`, `…000800` were **applied to the hosted DB on 2026-10-16**,
+  so visibility is now opt-in — but **no group grants any category or
+  subcategory yet**. Three groups exist (أولى / تانيه / تالته اعدادى) with zero
+  grants, and two of the three students are in no group at all, so all 5
+  published posts are invisible to everyone. Fix on the **المجموعات** page
+  (grant categories/subcategories per group), then assign students on
+  **الطلاب**. This also blocks the Play release: the reviewer account and the
+  store screenshots both need populated content.
+- **Guest login — `000800` applied** (guest category, الضيوف group and the grant
+  between them all exist now). Remaining: author a published post under the **guest**
   category, create the guest student account (username=`GUEST_USERNAME` /
   password=`GUEST_PASSWORD`) via the admin portal — never raw SQL — assign it to
   the **الضيوف** group, and build with those two dart-defines set.
