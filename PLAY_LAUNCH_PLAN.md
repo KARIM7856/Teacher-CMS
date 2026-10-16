@@ -31,8 +31,9 @@ Legend: **[done]** already finished · **[you]** needs your accounts or a device
 | **Content + accounts to review against** | **BLOCKER #1** — no group grants anything, so every student sees an empty app |
 | **Legal pages actually reachable** | **BLOCKER #2** — deployed build still predates them |
 | **Upload keystore** | **BLOCKER #3** — not present on this machine; without it there is no uploadable AAB |
-| Upload-ready AAB | **not available here** — see Step 5 |
-| Screenshots | not started — needs the app running against real content |
+| **Build toolchain + release pipeline** | **[done]** Flutter 3.47.7, JDK 17, Android SDK 36; release AAB builds end-to-end (verified 2026-10-16) |
+| Upload-ready AAB | **no** — only a debug-signed validation build; see Step 5 |
+| Screenshots | not started — needs real content (Step 1) **and** a device or AVD |
 | Play Console listing | not started |
 
 The three blockers are independent of one another and can be worked in
@@ -187,16 +188,17 @@ Play needs **2 minimum, 8 maximum**; upload 6. Shot list and rules are in
 Blocked until Step 1 gives the app something to display — an empty catalogue
 photographs as a broken app.
 
-Capture needs a device or emulator. **Neither is available on this machine:**
-`flutter`, `adb` and `emulator` are all absent. (An earlier revision of this
-plan described a `Pixel_2_API_26` AVD; that was on a different machine.) So
-either:
+Capture needs a device or emulator. `flutter` and `adb` **are** installed here
+now, but there is **no AVD and no emulator system image** — and no phone is
+connected. (An earlier revision described a `Pixel_2_API_26` AVD; that was on a
+different machine.) So either:
 
 - **A real Android phone** — best results; install via `flutter run --release`
   or from the AAB with `bundletool`.
-- **An emulator** — install the Android SDK and create an AVD at a valid Play
-  size. Prefer a recent system image; the app's `minSdk` is 24, but the WebView
-  and PDF surfaces are worth checking on something modern.
+- **An emulator** — the SDK is already installed, so this is just
+  `sdkmanager "system-images;android-36;google_apis;x86_64"` plus an `avdmanager`
+  AVD at a valid Play size. Prefer a recent image; the app's `minSdk` is 24, but
+  the WebView and PDF surfaces are worth checking on something modern.
 
 Hand this back to Claude once content exists and a device or emulator is
 reachable.
@@ -205,30 +207,67 @@ reachable.
 
 ## Step 5 — Build the upload artifact · **[you]** · BLOCKER #3
 
-A previous revision marked this **[done]** — a 58.5 MB release-signed AAB with
-production credentials compiled into all three ABIs. **That artifact is not on
-this machine, and neither is the key that signed it:**
+The toolchain is installed and the release pipeline is **verified working** on
+this machine (2026-10-16). What is still missing is the signing key and the
+credentials:
 
 | Needed | Present here? |
 | --- | --- |
-| `app/build/app/outputs/bundle/release/app-release.aab` | no (build output, gitignored) |
-| `keystores/teacher-cms-upload.jks` | **no** |
-| `app/android/key.properties` | **no** |
-| `app/dart_define.json` (the Supabase credentials) | **no** (gitignored) |
-| `flutter` toolchain | **not installed** |
-| `keytool` (JDK) | **not installed** |
+| `flutter` toolchain | **yes** — 3.47.7 stable, `C:\dev\flutter` |
+| JDK 17 + `keytool` | **yes** — Temurin 17.0.20.1 |
+| Android SDK + native build tools | **yes** — see *SDK prerequisites* below |
+| `keystores/teacher-cms-upload.jks` | **no** — blocks any uploadable build |
+| `app/android/key.properties` | **no** — same |
+| `app/dart_define.json` (Supabase credentials) | **no** (gitignored) |
+| An uploadable AAB | **no** — only a debug-signed validation build exists |
 
-**Find that keystore before generating a new one.** `RELEASE.md` §2 says it
-exists "only on this machine", so it is on whichever machine produced that
-build — check there and in your password manager. The upload key is what lets
-you ship *updates* to the same listing: publish with a new key and a later
-recovery of the old one is worthless, and vice versa.
+A previous revision marked this step **[done]**, citing a 58.5 MB release-signed
+AAB with production credentials in all three ABIs. That artifact was built on a
+**different machine** and is not here, and neither is the key that signed it.
+
+### SDK prerequisites
+
+`sdkmanager` does **not** pull these in transitively, and each one only surfaces
+when Gradle reaches the task that needs it — so a from-scratch setup fails
+three times in a row, once per missing piece. Learned the hard way 2026-10-16:
+
+| Package | Why it is needed |
+| --- | --- |
+| `platforms;android-36` | the project's own `compileSdk` / `targetSdk` |
+| `platforms;android-35` | a transitive plugin (`jni_flutter`) pins it **independently** of this project's `compileSdk` |
+| `build-tools;36.0.0` | matches the platform |
+| `platform-tools` | `adb`, needed for device installs and screenshots |
+| `cmake;3.22.1` | the `jni` package's native build. The NDK alone is **not** enough; this exact version is pinned by the Android Gradle Plugin |
+| `ndk;28.2.13676358` | Gradle auto-installs this on the first native build — no action needed |
+
+Install them in one shot:
+
+```bash
+sdkmanager "platforms;android-36" "platforms;android-35" \
+           "build-tools;36.0.0" "platform-tools" "cmake;3.22.1"
+yes | sdkmanager --licenses
+```
+
+Expect **~15 minutes** for a cold first build (Gradle distribution, NDK, and the
+dependency graph all download) and **~4 minutes** for warm rebuilds.
+
+> When diagnosing a failed build, do not trust a shell exit code taken through a
+> pipe — `flutter build … | tail` reports *tail's* status, so a failed Gradle run
+> looks like success. Redirect to a log and check the build's own exit code.
+
+### Find the keystore before generating a new one
+
+`RELEASE.md` §2 says the upload key exists "only on this machine", so it is on
+whichever machine produced that 58.5 MB build — check there and in your password
+manager. The upload key is what lets you ship *updates* to the same listing:
+publish with a new key and a later recovery of the old one is worthless, and
+vice versa.
 
 Nothing is published yet, so if the original is genuinely gone, generating a
 fresh key costs nothing. Once you do, **back it up immediately** — Play App
 Signing can reset a lost upload key on request, but it is slow and needs proof.
 
-To rebuild once the toolchain, keystore and `dart_define.json` are in place:
+### Building
 
 ```bash
 cd app
@@ -241,8 +280,40 @@ flutter build appbundle --release --dart-define-from-file=dart_define.json
 > app. Always build with the defines file before uploading, and treat a
 > surprisingly small AAB as a symptom.
 >
+> **This is confirmed, not theoretical.** The credential-less validation build
+> came out at 51.5 MB against the credentialed 58.5 MB — 6.9 MB smaller, right
+> where the warning predicts. So AAB size is a reliable pre-upload smoke test.
+>
 > Equally, a release build with no `key.properties` is **debug-signed** and
 > cannot be uploaded — the Gradle config warns rather than failing, by design.
+> Verify before uploading: the signer should be your own key, not
+> `CN=Android Debug`.
+>
+> ```bash
+> unzip -o -q app-release.aab -d /tmp/aab META-INF/*
+> keytool -printcert -file /tmp/aab/META-INF/*.RSA | grep Owner
+> ```
+
+### Known future breakage — Kotlin Gradle Plugin
+
+Every build prints:
+
+```
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP):
+passkeys_android, pdfx, ua_client_hints, wakelock_plus
+Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+```
+
+Harmless on Flutter 3.47.7, but **a future Flutter upgrade will break this build**
+until those plugins ship Built-in Kotlin support. `pdfx` is load-bearing — it
+renders the inline PDFs in the post viewer — so this is not a dependency you can
+simply drop. Before any Flutter upgrade, check those four plugins' changelogs;
+see the [migration guide](https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers).
+
+This is a reason to pin the Flutter version for the release and upgrade
+deliberately, not incidentally.
+
+### Version
 
 Version for the first upload is `1.0.0+1` from `app/pubspec.yaml`. Every
 subsequent upload needs the number after `+` increased.
@@ -294,7 +365,7 @@ requirement has been revised more than once; the console is authoritative.
 | **Right now** | **Step 5** — hunt for `teacher-cms-upload.jks`. If it is lost you want to know today, not after the listing is built |
 | Today | **Step 3** — deploy the legal pages (~10 min). Also ships the admin UI that Step 1 needs |
 | Next | **Step 1** — grants, assignments, real content, reviewer account |
-| Then | Install the Flutter/Android toolchain, then finish **Step 5** (keystore + AAB) |
+| Then | Finish **Step 5** — the keystore and `dart_define.json` are all that stand between you and an uploadable AAB (the toolchain is done) |
 | Then | **Step 4** screenshots, against the content from Step 1 |
 | Then | **Step 6** console; upload to the closed track as soon as the AAB exists |
 | Before submitting | The pre-submission checklist in [`RELEASE.md`](RELEASE.md) §9 |
